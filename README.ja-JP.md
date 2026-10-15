@@ -1,20 +1,19 @@
-# kiikoread
+# readll
 
-公開プロジェクト名は **kiikoread** です。Web サイトでは機器を「墨水屏」と表記し、GitHub URL・更新 URL・既存のバックアップ名は維持します。本体表示も kiikoread に統一します。白い公式サイトに画面プレビュー、機能紹介、版選択、Web USB 書き込み、Bin ダウンロードと[使用説明](flash/manual.html)を用意しました。`python3 tools/stage_public_flash.py _site` で公開ファイルを生成し、GitHub Pages / Cloudflare Pages の出力先を `_site` に設定できます。HTML と PDF は `docs/user-manual.zh-CN.json` から `tools/build_user_manual.py --font /path/to/a/static-CJK.ttf` で生成します（Python ReportLab が必要です）。
-正式 Bin は [GitHub Releases](https://github.com/wegooo-cell/read-pico-reader/releases) に保存し、公開サイト生成時に取得・検証します。OTA は kiikoread.com を優先し、失敗時は従来の GitHub 更新元へ戻ります。主サイトの生成は `python3 tools/stage_public_flash.py _site --ota-origin https://kiikoread.com`、GitHub Pages では既定パラメーターを使います。
+プロジェクト、ファームウェア UI、シミュレーター、Web、CMake project、パッケージ名は小文字 **readll** に統一します。`tools/package_flash.py` は USB/WebUSB と TF の資産を生成し、`tools/stage_public_flash.py` は任意の HTTPS 静的ホストへ配置できるサイトを生成します。生成物のサイズ・SHA-256 は `release-assets.json`、任意のローカル公開元マッピングは別 schema の `flash/release-sources.json` を使用します。無効なのは本体内オンライン OTA だけで、新しい readll OTA origin が設定されるまで旧ソースや暗黙のフォールバックを使用しません。
 
 
 [English](README.md) · [简体中文](README.zh-CN.md) · [Third-party notices](THIRD_PARTY_NOTICES.md)
 
 MindReset RDP-G01-W 向けの独立したオープンソース読書ファームウェアです。[MindReset の公式デモ](https://github.com/MindReset/read_pico_firmware)を基にしていますが、**MindReset の公式リリースではありません**。
 
-EPUB と TXT の読書、読書位置の保存、TF カードのファイル管理、Wi-Fi・ホットスポット・USB での転送に対応します。[HTTPS オンライン書き込みページ](https://wegooo-cell.github.io/read-pico-reader/)は PC 版 Chrome または Edge と USB データケーブルで利用できます。書き込む前に基板型番を確認してください。通常の書き込みでは設定、読書記録、TF カードの内容を消去しません。
+EPUB と TXT の読書、読書位置の保存、TF カードのファイル管理、Wi-Fi・ホットスポット・USB での転送に対応します。ローカル書き込みサイトは `python3 tools/stage_public_flash.py _site` で生成します。公開 URL は未設定です。
 
 オンライン書き込みではブートローダー、パーティションテーブル、アプリ、OTA データ領域を書き込みます。既存の NVS 設定と内部の書籍領域は維持されます。[更新履歴](docs/CHANGELOG.md)も参照してください。
 
 このファームウェアを使用中で自動的にダウンロードモードへ切り替わらない場合は、本体の「设置 → 升级和恢复 → BOOT 刷机 → 进入 BOOT 模式」を選び、PC がシリアルポートを再認識してから書き込みページで再試行してください。
 
-Wi-Fi 接続後、本体の「设置 → 升级和恢复 → 系统升级 → 检查更新」でオンライン更新を確認できます。rc84 以降は、新版の短い更新履歴と「稍后 / 开始更新」ボタンを表示します。旧版から rc84 に更新する場合は、書き込みページで今回の更新履歴をご覧ください。
+本体内オンライン OTA は未設定です。本体は「在线升级尚未配置」と表示し、更新 URL や旧ソースへのフォールバックを使用しません。WebUSB 書き込みサイト、USB 完全パッケージ、TF パッケージは引き続き利用できます。
 
 TF カード内の任意のフォルダーから TXT/EPUB を開いて読書位置を保存すると、再スキャンせずに書棚へ追加されます。書棚管理の「移出书架」は項目を非表示にするだけで、ファイル・読書位置・お気に入りは残します。再び読むと書棚へ戻ります。非表示の状態は本体に保存し、設定のバックアップと復元にも含めます。
 
@@ -62,7 +61,7 @@ EPUB の本文の各章は新しいページから始まり、収まる場合は
 
 TF カードは現在 FAT16/FAT32 に対応し、exFAT は有効になっていません。容量だけでは互換性を保証できません。ローカル開発版は 40 MHz の初期化失敗後に250ミリ秒待って再試行し、その後20/10 MHzに下げます。高速切替のビジーエラーも再試行します。カード検出の通信エラーを抜去と誤認せず、状態を保持して実際のマウントを試みます。初期化エラーからフォーマットを勧めたり実行したりしません。実際にカードを抜いた後は、ファイル利用を停止して明示的に再マウントするか、本体を再起動してください。
 
-最初に一度だけ、PC から OTA 基本版を完全に書き込み、ブートローダーと二つのファームウェア領域を導入します。既存の設定、読書記録、内部ストレージの位置、TF カードの内容は維持されます。その後はアプリケーション画像を `Pico-update.bin` という名前で TF カード直下に置き、「ファイル → 更新 → 更新をインストール」から更新できます。
+最初に一度だけ、PC から OTA 基本版を完全に書き込み、ブートローダーと二つのファームウェア領域を導入します。既存の設定、読書記録、内部ストレージの位置、TF カードの内容は維持されます。その後はアプリケーション画像を `readll-update.bin` という名前で TF カード直下に置き、「ファイル → 更新 → 更新をインストール」から更新できます。
 
 本体は画像のプロジェクト名、バージョン、サイズとヘッダーを確認し、未使用側の領域だけに書き込みます。完全性の確認後に起動先を切り替え、新しい版が初回起動確認前に異常終了した場合は以前の版へ自動的に戻ります。更新中は電源と TF カードを外さないでください。アプリケーションだけの更新では、最初の OTA 基本版導入やパーティション表の変更はできません。
 

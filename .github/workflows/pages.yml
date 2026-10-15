@@ -1,36 +1,8 @@
-name: Publish web flasher
+name: Publish readll web flasher
 
 on:
   push:
     branches: [main]
-    paths:
-      - flash/index.html
-      - flash/notices.html
-      - flash/manual.html
-      - flash/manual/**
-      - flash/assets/**
-      - flash/site.css
-      - flash/site.js
-      - flash/installer-bridge.js
-      - flash/manifest.json
-      - flash/releases.json
-      - flash/releases/**
-      - flash/versions.js
-      - flash/update.json
-      - flash/Pico-update*.bin
-      - flash/firmware.bin
-      - flash/ota_data_initial.bin
-      - flash/bootloader.bin
-      - flash/partitions.bin
-      - flash/vendor/**
-      - flash/licenses/**
-      - THIRD_PARTY_NOTICES.md
-      - tools/release_assets.py
-      - flash/release-assets.json
-      - tools/stage_public_flash.py
-      - tools/verify_flash_bundle.py
-      - tools/package_flash.py
-      - .github/workflows/pages.yml
   release:
     types: [published]
   workflow_dispatch:
@@ -45,18 +17,35 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  build:
+    runs-on: ubuntu-latest
+    container: espressif/idf:v6.1
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/configure-pages@v5
+      - name: Build, package, and verify public site
+        shell: bash
+        run: |
+          . "$IDF_PATH/export.sh"
+          idf.py -B build/pages -D SDKCONFIG=build/pages/sdkconfig -D SDKCONFIG_DEFAULTS=sdkconfig.ci set-target esp32s3
+          idf.py -B build/pages -D SDKCONFIG=build/pages/sdkconfig -D SDKCONFIG_DEFAULTS=sdkconfig.ci build
+          python3 tools/package_flash.py build/pages build/pages-package
+          python3 tools/stage_public_flash.py _site --package-dir build/pages-package
+          python3 tools/verify_flash_bundle.py _site
+          python3 -m unittest \
+            tools.rss_test.test_rss.StaticAndFixtureContractTests.test_pages_deployment_contract \
+            tools.rss_test.test_rss.StaticAndFixtureContractTests.test_release_manifest_schemas_do_not_conflict \
+            tools.rss_test.test_rss.StaticAndFixtureContractTests.test_usb_product_descriptor_uses_readll
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: _site
+
   deploy:
+    needs: build
     runs-on: ubuntu-latest
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - uses: actions/checkout@v4
-      - name: Validate and stage public flashing files
-        run: python3 tools/stage_public_flash.py _site
-      - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v4
-        with:
-          path: _site
       - id: deployment
         uses: actions/deploy-pages@v4

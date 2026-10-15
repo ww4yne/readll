@@ -1,0 +1,1 @@
+{"total":1,"future_top":"ignored","entries":[{"id":101,"feed_id":7,"title":"Entry 101","url":"https://feed.example/entries/101","author":"test","published_at":"2026-10-14T08:00:00Z","changed_at":"2026-10-14T08:01:00Z","status":"unread","starred":false,"reading_time":2,"content":"<p>body</p>","feed":{"category":{"id":1,"title":"News","future_nested":1}},"future_entry":[1,2]}]}

@@ -22,7 +22,7 @@
 #include "esp_partition.h"
 #include "esp_system.h"
 
-static const char *TAG = "kiikoread_ota";
+static const char *TAG = "readll_ota";
 
 static void set_message(char *out, size_t size, const char *text) {
     if (!out || !size) return;
@@ -48,7 +48,7 @@ static esp_err_t read_candidate(FILE *file, esp_image_header_t *header, esp_app_
     return ESP_OK;
 }
 
-esp_err_t pico_ota_inspect(const char *path, pico_ota_info_t *info) {
+esp_err_t readll_ota_inspect(const char *path, readll_ota_info_t *info) {
     if (!path || !info) return ESP_ERR_INVALID_ARG;
     memset(info, 0, sizeof(*info));
     const esp_app_desc_t *running_desc = esp_app_get_description();
@@ -85,7 +85,7 @@ esp_err_t pico_ota_inspect(const char *path, pico_ota_info_t *info) {
     esp_err_t err = read_candidate(file, &header, &candidate);
     fclose(file);
     if (err != ESP_OK) {
-        set_message(info->message, sizeof(info->message), "升级包不是有效的 kiikoread 固件");
+        set_message(info->message, sizeof(info->message), "升级包不是有效的 readll 固件");
         return err;
     }
 
@@ -95,7 +95,7 @@ esp_err_t pico_ota_inspect(const char *path, pico_ota_info_t *info) {
                     sizeof(running_desc->project_name)) ||
         !copy_field(candidate_project, sizeof(candidate_project), candidate.project_name,
                     sizeof(candidate.project_name)) || strcmp(current_project, candidate_project) != 0) {
-        set_message(info->message, sizeof(info->message), "升级包不属于当前 kiikoread 固件");
+        set_message(info->message, sizeof(info->message), "升级包不属于当前 readll 固件");
         return ESP_ERR_INVALID_RESPONSE;
     }
     if (!copy_field(info->candidate_version, sizeof(info->candidate_version), candidate.version,
@@ -114,9 +114,9 @@ esp_err_t pico_ota_inspect(const char *path, pico_ota_info_t *info) {
     return ESP_OK;
 }
 
-esp_err_t pico_ota_install(const char *path, char *message, size_t message_size) {
-    pico_ota_info_t info = {0};
-    esp_err_t err = pico_ota_inspect(path, &info);
+esp_err_t readll_ota_install(const char *path, char *message, size_t message_size) {
+    readll_ota_info_t info = {0};
+    esp_err_t err = readll_ota_inspect(path, &info);
     if (err != ESP_OK) {
         set_message(message, message_size, info.message);
         return err;
@@ -184,7 +184,7 @@ esp_err_t pico_ota_install(const char *path, char *message, size_t message_size)
     return ESP_OK;
 }
 
-void pico_ota_confirm_running(void) {
+void readll_ota_confirm_running(void) {
     const esp_partition_t *running = esp_ota_get_running_partition();
     esp_ota_img_states_t state = ESP_OTA_IMG_UNDEFINED;
     if (!running || esp_ota_get_state_partition(running, &state) != ESP_OK ||

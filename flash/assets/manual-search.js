@@ -90,7 +90,7 @@
     'faq-web-flash': '刷机连接失败 failed to initialize 找不到串口',
     'ota-check': '检查更新 联网更新 找新版本',
     'ota-install': '安装更新 ota升级 下载新版本',
-    'tf-update': 'tf卡升级 bin放根目录 Pico-update.bin',
+    'tf-update': 'tf卡升级 bin放根目录 readll-update.bin',
     'downgrade': '降级 老版本 回退版本 rc88',
     'boot-mode': 'boot刷机 进入boot 下载模式',
     'web-install': '首次安装 网页刷机 重新刷机',
@@ -166,5 +166,5 @@
   }
   const api = { create, normalize };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
-  else root.KiikoManualSearch = api;
+  else root.readllManualSearch = api;
 })(typeof window !== 'undefined' ? window : globalThis);

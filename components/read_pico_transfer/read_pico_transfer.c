@@ -444,7 +444,9 @@ static bool s_ble_network_reserved;
 #include "transfer_policy.h"
 #include "transfer_credentials_store.h"
 #include "esp_event.h"
+#include "esp_crt_bundle.h"
 #include "esp_heap_caps.h"
+#include "esp_http_client.h"
 #include "esp_http_server.h"
 #include "esp_log.h"
 #include "esp_timer.h"
@@ -500,6 +502,221 @@ static bool claim_config(void) {
 
 static void release_config(void) {
     portENTER_CRITICAL(&s_lock); s_config_busy = false; portEXIT_CRITICAL(&s_lock);
+}
+
+/* ---- Miniflux 配置 / Miniflux configuration ---- */
+#define MINIFLUX_NVS_NS "rp_miniflux"
+#define MINIFLUX_NVS_KEY "config"
+#define MINIFLUX_CONFIG_VERSION 1
+
+typedef struct {
+    uint8_t version;
+    char base_url[READ_PICO_MINIFLUX_BASE_URL_MAX + 1];
+    char api_token[READ_PICO_MINIFLUX_TOKEN_MAX + 1];
+} miniflux_config_t;
+
+static bool miniflux_port_valid(const char *text, size_t length) {
+    if (!length || length > 5) return false;
+    unsigned port = 0;
+    for (size_t i = 0; i < length; ++i) {
+        if (text[i] < '0' || text[i] > '9') return false;
+        port = port * 10u + (unsigned)(text[i] - '0');
+    }
+    return port > 0 && port <= 65535;
+}
+
+static bool miniflux_ipv4_valid(const char *host, size_t length) {
+    unsigned octets = 0;
+    const char *part = host;
+    for (size_t i = 0; i <= length; ++i) {
+        if (i != length && host[i] != '.') continue;
+        size_t digits = (size_t)(host + i - part);
+        if (!digits || digits > 3 || (digits > 1 && part[0] == '0')) return false;
+        unsigned value = 0;
+        for (size_t j = 0; j < digits; ++j) {
+            if (part[j] < '0' || part[j] > '9') return false;
+            value = value * 10u + (unsigned)(part[j] - '0');
+        }
+        if (value > 255) return false;
+        ++octets;
+        part = host + i + 1;
+    }
+    return octets == 4;
+}
+
+static bool miniflux_host_valid(const char *host, size_t length) {
+    if (!length) return false;
+    const char *colon = memchr(host, ':', length);
+    size_t host_length = colon ? (size_t)(colon - host) : length;
+    bool numeric = true;
+    for (size_t i = 0; i < host_length; ++i)
+        if ((host[i] < '0' || host[i] > '9') && host[i] != '.') numeric = false;
+    if (numeric && !miniflux_ipv4_valid(host, host_length)) return false;
+    if (!host_length || host[0] == '.' || host[host_length - 1] == '.' ||
+        host[0] == '-' || host[host_length - 1] == '-') return false;
+    bool label_start = true;
+    for (size_t i = 0; i < host_length; ++i) {
+        unsigned char ch = (unsigned char)host[i];
+        if (ch == '.') {
+            if (label_start || i + 1 == host_length || host[i - 1] == '-') return false;
+            label_start = true;
+        } else {
+            if (!((ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') ||
+                  (ch >= '0' && ch <= '9') || ch == '-')) return false;
+            if (label_start && ch == '-') return false;
+            label_start = false;
+        }
+    }
+    return !colon || (memchr(colon + 1, ':', length - host_length - 1) == NULL &&
+                      miniflux_port_valid(colon + 1, length - host_length - 1));
+}
+
+static bool miniflux_path_valid(const char *path) {
+    const char *segment = path;
+    for (const char *p = path;; ++p) {
+        unsigned char ch = (unsigned char)*p;
+        if (!ch || ch == '/') {
+            size_t length = (size_t)(p - segment);
+            if (ch == '/' && p != path && !length) return false;
+            if ((length == 1 && segment[0] == '.') ||
+                (length == 2 && segment[0] == '.' && segment[1] == '.')) return false;
+            if (!ch) return true;
+            segment = p + 1;
+            continue;
+        }
+        if (ch <= 0x20 || ch >= 0x7f || ch == '\\' || ch == '?' || ch == '#') return false;
+        if (ch == '%') {
+            if (!p[1] || !p[2] || hex_value((unsigned char)p[1]) < 0 ||
+                hex_value((unsigned char)p[2]) < 0) return false;
+            unsigned char decoded = (unsigned char)(
+                (hex_value((unsigned char)p[1]) << 4) | hex_value((unsigned char)p[2]));
+            if (decoded <= 0x20 || decoded == '.' || decoded == '/' || decoded == '\\' ||
+                decoded == '?' || decoded == '#') return false;
+            p += 2;
+        } else if (!((ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') ||
+                     (ch >= '0' && ch <= '9') || strchr("-._~!$&'()*+,;=:@", ch))) {
+            return false;
+        }
+    }
+}
+
+static bool miniflux_normalize_base_url(const char *input,
+                                        char out[READ_PICO_MINIFLUX_BASE_URL_MAX + 1]) {
+    if (!input) return false;
+    while (*input == ' ' || *input == '\t' || *input == '\r' || *input == '\n') ++input;
+    size_t length = strnlen(input, READ_PICO_MINIFLUX_BASE_URL_MAX + 2);
+    while (length && (input[length - 1] == ' ' || input[length - 1] == '\t' ||
+                      input[length - 1] == '\r' || input[length - 1] == '\n')) --length;
+    if (length < 9 || length > READ_PICO_MINIFLUX_BASE_URL_MAX ||
+        strncmp(input, "https://", 8)) return false;
+    while (length > 8 && input[length - 1] == '/') --length;
+    if (length < 9) return false;
+    memcpy(out, input, length);
+    out[length] = 0;
+    const char *authority = out + 8;
+    const char *path = strchr(authority, '/');
+    size_t authority_length = path ? (size_t)(path - authority) : strlen(authority);
+    if (!miniflux_host_valid(authority, authority_length)) return false;
+    return !path || miniflux_path_valid(path);
+}
+
+static bool miniflux_token_valid(const char *token) {
+    if (!token) return false;
+    size_t length = strnlen(token, READ_PICO_MINIFLUX_TOKEN_MAX + 1);
+    if (!length || length > READ_PICO_MINIFLUX_TOKEN_MAX) return false;
+    for (size_t i = 0; i < length; ++i) {
+        unsigned char ch = (unsigned char)token[i];
+        if (ch <= 0x20 || ch >= 0x7f) return false;
+    }
+    return true;
+}
+
+static bool miniflux_config_valid(const miniflux_config_t *config) {
+    if (!config || config->version != MINIFLUX_CONFIG_VERSION ||
+        !memchr(config->base_url, 0, sizeof(config->base_url)) ||
+        !memchr(config->api_token, 0, sizeof(config->api_token))) return false;
+    char normalized[READ_PICO_MINIFLUX_BASE_URL_MAX + 1];
+    return miniflux_normalize_base_url(config->base_url, normalized) &&
+           !strcmp(normalized, config->base_url) && miniflux_token_valid(config->api_token);
+}
+
+static esp_err_t miniflux_load(miniflux_config_t *out) {
+    memset(out, 0, sizeof(*out));
+    nvs_handle_t handle;
+    esp_err_t err = nvs_open(MINIFLUX_NVS_NS, NVS_READONLY, &handle);
+    if (err == ESP_ERR_NVS_NOT_FOUND) return ESP_ERR_NOT_FOUND;
+    if (err != ESP_OK) return err;
+    size_t size = sizeof(*out);
+    err = nvs_get_blob(handle, MINIFLUX_NVS_KEY, out, &size);
+    nvs_close(handle);
+    if (err == ESP_ERR_NVS_NOT_FOUND) return ESP_ERR_NOT_FOUND;
+    if (err != ESP_OK) return err;
+    if (size != sizeof(*out) || !miniflux_config_valid(out)) {
+        clear_secret(out, sizeof(*out));
+        return ESP_ERR_INVALID_STATE;
+    }
+    return ESP_OK;
+}
+
+static esp_err_t miniflux_store(const miniflux_config_t *config) {
+    nvs_handle_t handle;
+    esp_err_t err = nvs_open(MINIFLUX_NVS_NS, NVS_READWRITE, &handle);
+    if (err != ESP_OK) return err;
+    err = config ? nvs_set_blob(handle, MINIFLUX_NVS_KEY, config, sizeof(*config))
+                 : nvs_erase_key(handle, MINIFLUX_NVS_KEY);
+    if (!config && err == ESP_ERR_NVS_NOT_FOUND) err = ESP_OK;
+    if (err == ESP_OK) err = nvs_commit(handle);
+    nvs_close(handle);
+    return err;
+}
+
+esp_err_t read_pico_transfer_miniflux_set(const char *base_url, const char *api_token) {
+    if (base_url && api_token && !base_url[0] && !api_token[0])
+        return read_pico_transfer_miniflux_clear();
+    miniflux_config_t config = {.version = MINIFLUX_CONFIG_VERSION};
+    if (!miniflux_normalize_base_url(base_url, config.base_url) ||
+        !miniflux_token_valid(api_token)) return ESP_ERR_INVALID_ARG;
+    memcpy(config.api_token, api_token, strlen(api_token) + 1);
+    if (!claim_config()) {
+        clear_secret(&config, sizeof(config));
+        return ESP_ERR_INVALID_STATE;
+    }
+    esp_err_t err = miniflux_store(&config);
+    clear_secret(&config, sizeof(config));
+    release_config();
+    return err;
+}
+
+esp_err_t read_pico_transfer_miniflux_clear(void) {
+    if (!claim_config()) return ESP_ERR_INVALID_STATE;
+    esp_err_t err = miniflux_store(NULL);
+    release_config();
+    return err;
+}
+
+esp_err_t read_pico_transfer_miniflux_get(char *base_url, size_t base_cap,
+                                         char *api_token, size_t token_cap) {
+    if (!base_url || !base_cap || !api_token || !token_cap) return ESP_ERR_INVALID_ARG;
+    base_url[0] = 0;
+    api_token[0] = 0;
+    if (!claim_config()) return ESP_ERR_INVALID_STATE;
+    miniflux_config_t config;
+    esp_err_t err = miniflux_load(&config);
+    if (err == ESP_OK) {
+        size_t base_length = strlen(config.base_url), token_length = strlen(config.api_token);
+        if (base_length + 1 > base_cap || token_length + 1 > token_cap) err = ESP_ERR_INVALID_SIZE;
+        else {
+            memcpy(base_url, config.base_url, base_length + 1);
+            memcpy(api_token, config.api_token, token_length + 1);
+        }
+    }
+    clear_secret(&config, sizeof(config));
+    release_config();
+    if (err != ESP_OK) {
+        base_url[0] = 0;
+        clear_secret(api_token, token_cap);
+    }
+    return err;
 }
 
 static void publish_credentials(const transfer_credentials_t *c) {
@@ -1237,6 +1454,191 @@ static esp_err_t signature_handler(httpd_req_t *req) {
     return send_json(req, json);
 }
 
+static esp_err_t miniflux_status_response(httpd_req_t *req) {
+    miniflux_config_t config;
+    if (!claim_config()) return wifi_response(
+        req, "409 Conflict", "{\"error\":\"配置正在被使用，请稍后重试\"}");
+    esp_err_t err = miniflux_load(&config);
+    release_config();
+    if (err != ESP_OK && err != ESP_ERR_NOT_FOUND) {
+        clear_secret(&config, sizeof(config));
+        return wifi_response(req, "500 Internal Server Error",
+                             "{\"error\":\"Miniflux 配置读取失败，请重新保存或清除\"}");
+    }
+    cJSON *json = cJSON_CreateObject();
+    if (!json) {
+        clear_secret(&config, sizeof(config));
+        return ESP_ERR_NO_MEM;
+    }
+    bool configured = err == ESP_OK;
+    cJSON_AddBoolToObject(json, "configured", configured);
+    cJSON_AddStringToObject(json, "base_url", configured ? config.base_url : "");
+    cJSON_AddStringToObject(json, "token_masked", configured ? "••••••••" : "");
+    clear_secret(&config, sizeof(config));
+    return send_json(req, json);
+}
+
+static esp_err_t miniflux_config_handler(httpd_req_t *req) {
+    if (!management_request(req))
+        return wifi_response(req, "403 Forbidden",
+                             "{\"error\":\"请从设备显示的地址打开管理页面\"}");
+    if (req->method == HTTP_GET) {
+        if (req->content_len) return wifi_response(
+            req, "400 Bad Request", "{\"error\":\"状态请求不应包含正文\"}");
+        return miniflux_status_response(req);
+    }
+    if (req->method == HTTP_DELETE) {
+        if (req->content_len) return wifi_response(
+            req, "400 Bad Request", "{\"error\":\"清除请求不应包含正文\"}");
+        portENTER_CRITICAL(&s_lock);
+        bool accepted = admission_begin(s_stopping, &s_upload_active);
+        portEXIT_CRITICAL(&s_lock);
+        if (!accepted) return wifi_response(
+            req, "409 Conflict", "{\"error\":\"正在传输，请完成后再清除凭据\"}");
+        esp_err_t err = read_pico_transfer_miniflux_clear();
+        portENTER_CRITICAL(&s_lock); s_upload_active = false; portEXIT_CRITICAL(&s_lock);
+        return wifi_response(req, err == ESP_OK ? "200 OK" : "500 Internal Server Error",
+            err == ESP_OK ? "{\"ok\":true,\"configured\":false}" :
+                            "{\"error\":\"清除 Miniflux 凭据失败，请重试\"}");
+    }
+    char content_type[80];
+    if (httpd_req_get_hdr_value_str(req, "Content-Type", content_type, sizeof(content_type)) != ESP_OK ||
+        strncasecmp(content_type, "application/json", 16) ||
+        (content_type[16] && content_type[16] != ';' && content_type[16] != ' '))
+        return wifi_response(req, "400 Bad Request",
+                             "{\"error\":\"Miniflux 配置必须使用 application/json\"}");
+    if (req->content_len < 32 || req->content_len > 832)
+        return wifi_response(req, "400 Bad Request",
+                             "{\"error\":\"Miniflux 配置正文长度无效\"}");
+    char body[833];
+    if (!recv_small_body(req, body, sizeof(body)))
+        return wifi_response(req, "400 Bad Request",
+                             "{\"error\":\"Miniflux 配置接收失败\"}");
+    const char *end = NULL;
+    cJSON *json = cJSON_ParseWithOpts(body, &end, true);
+    const cJSON *base_url = json ? cJSON_GetObjectItemCaseSensitive(json, "base_url") : NULL;
+    const cJSON *api_token = json ? cJSON_GetObjectItemCaseSensitive(json, "api_token") : NULL;
+    bool valid_shape = cJSON_IsObject(json) && cJSON_IsString(base_url) &&
+                       base_url->valuestring && cJSON_IsString(api_token) &&
+                       api_token->valuestring;
+    if (!valid_shape) {
+        if (api_token && api_token->valuestring)
+            clear_secret(api_token->valuestring, strlen(api_token->valuestring));
+        cJSON_Delete(json);
+        clear_secret(body, sizeof(body));
+        return wifi_response(req, "400 Bad Request",
+            "{\"error\":\"请提供 HTTPS base URL 与 API token\"}");
+    }
+    portENTER_CRITICAL(&s_lock);
+    bool accepted = admission_begin(s_stopping, &s_upload_active);
+    portEXIT_CRITICAL(&s_lock);
+    char normalized[READ_PICO_MINIFLUX_BASE_URL_MAX + 1] = {0};
+    bool normalized_ok = miniflux_normalize_base_url(base_url->valuestring, normalized);
+    esp_err_t err = accepted && normalized_ok ? read_pico_transfer_miniflux_set(
+        normalized, api_token->valuestring) : ESP_ERR_INVALID_ARG;
+    clear_secret(api_token->valuestring, strlen(api_token->valuestring));
+    cJSON_Delete(json);
+    clear_secret(body, sizeof(body));
+    if (accepted) {
+        portENTER_CRITICAL(&s_lock); s_upload_active = false; portEXIT_CRITICAL(&s_lock);
+    }
+    if (!accepted) return wifi_response(
+        req, "409 Conflict", "{\"error\":\"正在传输，请完成后再保存配置\"}");
+    if (err == ESP_ERR_INVALID_ARG) return wifi_response(
+        req, "400 Bad Request",
+        "{\"error\":\"URL 必须是有效的 HTTPS base URL；token 为1至255个非空白 ASCII 字符\"}");
+    if (err != ESP_OK) return wifi_response(
+        req, "500 Internal Server Error",
+        "{\"error\":\"保存 Miniflux 配置失败，原配置未主动清除\"}");
+    cJSON *response = cJSON_CreateObject();
+    if (!response) return ESP_ERR_NO_MEM;
+    cJSON_AddBoolToObject(response, "configured", true);
+    cJSON_AddStringToObject(response, "base_url", normalized);
+    cJSON_AddStringToObject(response, "token_masked", "••••••••");
+    memset(normalized, 0, sizeof(normalized));
+    return send_json(req, response);
+}
+
+static esp_err_t miniflux_connection_test(int *status_code) {
+    char base_url[READ_PICO_MINIFLUX_BASE_URL_MAX + 1];
+    char api_token[READ_PICO_MINIFLUX_TOKEN_MAX + 1];
+    esp_err_t err = read_pico_transfer_miniflux_get(
+        base_url, sizeof(base_url), api_token, sizeof(api_token));
+    if (err != ESP_OK) return err;
+    time_t now = time(NULL);
+    if (now < 1704067200) {
+        uint32_t utc = 0;
+        err = read_pico_transfer_sync_time_online(&utc);
+        if (err != ESP_OK) goto done;
+    }
+    char url[READ_PICO_MINIFLUX_BASE_URL_MAX + sizeof("/v1/me")];
+    if (snprintf(url, sizeof(url), "%s/v1/me", base_url) >= (int)sizeof(url)) {
+        err = ESP_ERR_INVALID_SIZE;
+        goto done;
+    }
+    esp_http_client_config_t config = {
+        .url = url,
+        .timeout_ms = 15000,
+        .buffer_size = 1024,
+        .buffer_size_tx = 1024,
+        .crt_bundle_attach = esp_crt_bundle_attach,
+        .disable_auto_redirect = true,
+        .keep_alive_enable = false,
+    };
+    esp_http_client_handle_t client = esp_http_client_init(&config);
+    if (!client) {
+        err = ESP_ERR_NO_MEM;
+        goto done;
+    }
+    err = esp_http_client_set_header(client, "X-Auth-Token", api_token);
+    if (err == ESP_OK) err = esp_http_client_set_header(client, "Accept", "application/json");
+    if (err == ESP_OK) err = esp_http_client_set_header(client, "User-Agent", "readll-rss");
+    if (err == ESP_OK) err = esp_http_client_perform(client);
+    *status_code = err == ESP_OK ? esp_http_client_get_status_code(client) : 0;
+    esp_http_client_cleanup(client);
+done:
+    clear_secret(api_token, sizeof(api_token));
+    memset(base_url, 0, sizeof(base_url));
+    return err;
+}
+
+static esp_err_t miniflux_test_handler(httpd_req_t *req) {
+    if (!management_request(req))
+        return wifi_response(req, "403 Forbidden",
+                             "{\"error\":\"请从设备显示的地址打开管理页面\"}");
+    if (req->content_len) return wifi_response(
+        req, "400 Bad Request", "{\"error\":\"连接测试不应包含正文\"}");
+    read_pico_transfer_status_t status;
+    read_pico_transfer_get_status(&status);
+    if (status.mode != READ_PICO_TRANSFER_MODE_STA || !status.network_ready)
+        return wifi_response(req, "503 Service Unavailable",
+                             "{\"error\":\"请切换到已有 WiFi 模式后测试 Miniflux\"}");
+    portENTER_CRITICAL(&s_lock);
+    bool accepted = admission_begin(s_stopping, &s_upload_active);
+    portEXIT_CRITICAL(&s_lock);
+    if (!accepted) return wifi_response(
+        req, "409 Conflict", "{\"error\":\"正在传输，请完成后再测试连接\"}");
+    int upstream_status = 0;
+    esp_err_t err = miniflux_connection_test(&upstream_status);
+    portENTER_CRITICAL(&s_lock); s_upload_active = false; portEXIT_CRITICAL(&s_lock);
+    if (err == ESP_ERR_NOT_FOUND) return wifi_response(
+        req, "400 Bad Request", "{\"error\":\"请先保存 Miniflux 配置\"}");
+    if (err != ESP_OK) return wifi_response(
+        req, "502 Bad Gateway", "{\"error\":\"无法连接 Miniflux，请检查网络、URL 与证书\"}");
+    if (upstream_status == 401 || upstream_status == 403)
+        return wifi_response(req, "401 Unauthorized",
+                             "{\"error\":\"Miniflux 拒绝了 API token\"}");
+    if (upstream_status != 200) {
+        cJSON *json = cJSON_CreateObject();
+        if (!json) return ESP_ERR_NO_MEM;
+        cJSON_AddStringToObject(json, "error", "Miniflux 返回非成功状态");
+        cJSON_AddNumberToObject(json, "upstream_status", upstream_status);
+        httpd_resp_set_status(req, "502 Bad Gateway");
+        return send_json(req, json);
+    }
+    return wifi_response(req, "200 OK", "{\"ok\":true}");
+}
+
 static esp_err_t clock_handler(httpd_req_t *req) {
     if (!management_request(req)) return respond_error(req, 403);
     if (req->content_len < 12 || req->content_len > 48) return respond_error(req, 400);
@@ -1864,7 +2266,7 @@ esp_err_t read_pico_transfer_start(const read_pico_transfer_cfg_t *cfg) {
     if (cfg->mode == READ_PICO_TRANSFER_MODE_AP) {
         uint8_t mac[6];
         err = esp_read_mac(mac, ESP_MAC_WIFI_SOFTAP); if (err != ESP_OK) goto fail;
-        snprintf((char *)wifi.ap.ssid, sizeof(wifi.ap.ssid), "kiikoread-%02X%02X", mac[4], mac[5]);
+        snprintf((char *)wifi.ap.ssid, sizeof(wifi.ap.ssid), "readll-%02X%02X", mac[4], mac[5]);
         strcpy((char *)wifi.ap.password, READ_PICO_TRANSFER_PASSWORD);
         wifi.ap.ssid_len = strlen((char *)wifi.ap.ssid); wifi.ap.channel = 1;
         wifi.ap.max_connection = 1; wifi.ap.authmode = WIFI_AUTH_WPA2_PSK;
@@ -1900,7 +2302,7 @@ esp_err_t read_pico_transfer_start(const read_pico_transfer_cfg_t *cfg) {
     // File metadata and wallpaper settings access NVS; the HTTP stack must remain readable while caches are disabled.
     // 在无线电启动前预留网页任务，避免 WiFi 内存碎片导致任务创建失败。
     // Reserve the HTTP task before starting the radio to avoid WiFi heap fragmentation.
-    http.stack_size = 12288; http.max_uri_handlers = 18; http.max_open_sockets = 3;
+    http.stack_size = 12288; http.max_uri_handlers = 22; http.max_open_sockets = 3;
     http.recv_wait_timeout = 15;
     http.send_wait_timeout = 15;
     http.task_caps = MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT;
@@ -1929,6 +2331,10 @@ esp_err_t read_pico_transfer_start(const read_pico_transfer_cfg_t *cfg) {
         { .uri = "/books", .method = HTTP_POST, .handler = books_handler },
         { .uri = "/signature", .method = HTTP_GET, .handler = signature_handler },
         { .uri = "/signature", .method = HTTP_POST, .handler = signature_handler },
+        { .uri = "/rss-config", .method = HTTP_GET, .handler = miniflux_config_handler },
+        { .uri = "/rss-config", .method = HTTP_POST, .handler = miniflux_config_handler },
+        { .uri = "/rss-config", .method = HTTP_DELETE, .handler = miniflux_config_handler },
+        { .uri = "/rss-test", .method = HTTP_POST, .handler = miniflux_test_handler },
         { .uri = "/clock", .method = HTTP_POST, .handler = clock_handler },
         { .uri = "/titles", .method = HTTP_GET, .handler = titles_handler },
         { .uri = "/titles", .method = HTTP_POST, .handler = titles_handler },

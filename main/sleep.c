@@ -77,7 +77,7 @@ extern const uint8_t lock_4bpp_bin_start[] asm("_binary_lock_4bpp_bin_start");
 
 void app_lock_feedback(EpdiyHighlevelState *hl) {
     s_lock_feedback_visible = false;
-    if (!hl || app_settings_lock_style() != 2 || pico_online_busy()) return;
+    if (!hl || app_settings_lock_style() != 2 || readll_online_busy()) return;
     read_pico_transfer_status_t transfer = {0};
     read_pico_transfer_get_status(&transfer);
     if (transfer.state == READ_PICO_TRANSFER_UPLOADING) return;
@@ -383,7 +383,7 @@ esp_err_t app_enter_host_sleep(app_sleep_mode_t mode) {
     if (mode != APP_SLEEP_OFF && mode != APP_SLEEP_DEEP) return ESP_ERR_INVALID_ARG;
     // 产品页用 on_before_lock 保存并收齐后台；保留阅读内存以便交接失败仍可回到原页。
     // Product pages checkpoint/join in on_before_lock; retain reader state so a failed handoff can resume the same page.
-    if (pico_online_busy() || !read_pico_transfer_pause_for_sleep()) return ESP_ERR_INVALID_STATE;
+    if (readll_online_busy() || !read_pico_transfer_pause_for_sleep()) return ESP_ERR_INVALID_STATE;
     (void)ble_pt_stop(2000);
     (void)app_sync_time_to_pmu();
     // 必须先断面板轨，再拉低 MODE，避免常开逻辑仍耗电。/ Drop panel rails before parking MODE on the always-on supply.

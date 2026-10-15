@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: Apache-2.0
- * 中文：刷机版本选择仅使用已发布清单；每次选择固定一个独立安装入口。
- * English: Select published manifests and bind each choice to an independent installer.
+ * 中文：读取当前本地 readll 构建，并固定对应安装入口。
+ * English: Load the current local readll build and bind its installer.
  */
 (() => {
   const selector = document.getElementById("firmware-choice");
@@ -12,7 +12,7 @@
   const hint = document.getElementById("firmware-choice-hint");
   let installer = document.getElementById("flash-installer");
   let serialReady = false, manifestReady = false, request = 0;
-  const latest = {manifest: "./manifest.json", bin: "./Pico-update.bin"};
+  const latest = {manifest: "./manifest.json", bin: "./readll-update.bin"};
   const releases = new Map([[latest.manifest, latest]]);
   const showInstaller = () => {
     installer.hidden = !(serialReady && manifestReady);
@@ -31,7 +31,7 @@
     download.hidden = true;
     download.removeAttribute("href");
     version.textContent = "读取中…";
-    document.dispatchEvent(new CustomEvent("kiikoread:release-loading"));
+    document.dispatchEvent(new CustomEvent("readll:release-loading"));
     updated.textContent = "读取中…";
     updated.removeAttribute("datetime");
     if (serialReady) title.textContent = "正在读取所选版本…";
@@ -45,7 +45,7 @@
           (choice.version && manifest.version !== choice.version) ||
           manifest.new_install_prompt_erase !== true) throw new Error("Invalid release");
       version.textContent = manifest.version;
-      if (choice === latest) selector.options[0].textContent = `最新正式版 · ${manifest.version}`;
+      if (choice === latest) selector.options[0].textContent = `当前 readll 构建 · ${manifest.version}`;
       const published = new Date(manifest.updated_at);
       if (Number.isFinite(published.getTime())) {
         updated.dateTime = published.toISOString();
@@ -68,11 +68,11 @@
       download.hidden = false;
       manifestReady = true;
       showInstaller();
-      document.dispatchEvent(new CustomEvent("kiikoread:release", {detail: {manifest, latest: choice === latest}}));
+      document.dispatchEvent(new CustomEvent("readll:release", {detail: {manifest, latest: choice === latest}}));
     } catch (error) {
       if (current !== request) return;
       version.textContent = "读取失败，请重选版本或刷新页面";
-      document.dispatchEvent(new CustomEvent("kiikoread:release-unavailable"));
+      document.dispatchEvent(new CustomEvent("readll:release-unavailable"));
       updated.textContent = "暂不可用";
       if (serialReady) title.textContent = "所选版本暂不可用，请重选版本或刷新页面。";
       showInstaller();
@@ -106,28 +106,6 @@
   new MutationObserver(syncSelector).observe(document.body, {childList: true});
   selector.addEventListener("change", selectRelease);
   (async () => {
-    try {
-      const catalog = await readJSON("./releases.json");
-      if (catalog.schema !== 1 || !Array.isArray(catalog.releases)) throw new Error("Invalid catalog");
-      for (const release of catalog.releases) {
-        if (!/^\d+\.\d+\.\d+(?:-rc\d+)?$/.test(release.version) ||
-            release.manifest !== `releases/${release.version}/manifest.json` ||
-            release.bin !== `Pico-update-${release.version}.bin` || releases.has(release.manifest))
-          throw new Error("Invalid archived release");
-      }
-      for (const release of catalog.releases) {
-        releases.set(release.manifest, release);
-        const option = document.createElement("option");
-        option.value = release.manifest;
-        option.textContent = `${release.version} · 历史正式版`;
-        selector.appendChild(option);
-      }
-      const wanted = new URLSearchParams(location.search).get("version");
-      const choice = catalog.releases.find(item => item.version === wanted || item.version.split("-").pop() === wanted);
-      if (choice) selector.value = choice.manifest;
-    } catch (error) {
-      hint.textContent = "历史版本列表暂不可用，可选择最新正式版或刷新页面重试。";
-    }
     catalogReady = true;
     syncSelector();
     await selectRelease();

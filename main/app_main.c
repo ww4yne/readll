@@ -137,7 +137,7 @@ void app_main(void) {
 
     // 硬件、显示、触摸与必要的出厂设置均成功后确认新槽。
     // Confirm a new slot only after hardware, display, touch, and required setup succeed.
-    pico_ota_confirm_running();
+    readll_ota_confirm_running();
 
     app_lock_boot_gate(&hl, hw.touch, hw.sensor);
     const app_desc_t *first = app_home_page();

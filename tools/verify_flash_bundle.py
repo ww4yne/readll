@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate the public kiikoread web-flashing bundle."""
+"""Validate the public readll web-flashing bundle."""
 
 from __future__ import annotations
 
@@ -25,7 +25,7 @@ def check_archived_releases(folder: Path, current_partitions: Path | None = None
     catalog_path = folder / "releases.json"
     if not catalog_path.is_file():
         return []
-    catalog = json.loads(catalog_path.read_text())
+    catalog = json.loads(catalog_path.read_text(encoding="utf-8"))
     assert catalog.get("schema") == 1 and isinstance(catalog.get("releases"), list)
     versions = set()
     for release in catalog["releases"]:
@@ -35,12 +35,12 @@ def check_archived_releases(folder: Path, current_partitions: Path | None = None
         versions.add(version)
         assert re.fullmatch(r"[0-9a-f]{40}", release["source_commit"]), "missing release provenance"
         assert release["manifest"] == f"releases/{version}/manifest.json"
-        assert release["bin"] == f"Pico-update-{version}.bin"
+        assert release["bin"] == f"readll-update-{version}.bin"
         manifest_path = folder / release["manifest"]
-        manifest = json.loads(manifest_path.read_text())
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
         assert manifest["version"] == version and manifest.get("new_install_prompt_erase") is True
-        assert manifest["pico_ota"]["base_version"] == version
-        assert manifest["pico_ota"]["layout"] == "pico-dual-4m-v1" and manifest["pico_ota"]["rollback"] is True
+        assert manifest["readll_ota"]["base_version"] == version
+        assert manifest["readll_ota"]["layout"] == "readll-dual-4m-v1" and manifest["readll_ota"]["rollback"] is True
         builds = manifest["builds"]
         assert len(builds) == 1 and builds[0]["chipFamily"] == "ESP32-S3"
         paths = {name: name for name in EXPECTED}
@@ -65,8 +65,7 @@ def check_archived_releases(folder: Path, current_partitions: Path | None = None
                 assert data[0] == 0xe9 and struct.unpack_from("<H", data, 12)[0] == 9
                 assert struct.unpack_from("<I", data, 32)[0] == 0xabcd5432
                 assert data[48:80].split(b"\0")[0].decode() == version
-                assert data[80:112].split(b"\0")[0] == b"Read_Pico"
-                assert b"PICO_HTTPS_OTA_V1" in data
+                assert data[80:112].split(b"\0")[0] == b"readll"
             elif name == "partitions.bin":
                 assert data == (current_partitions or folder / "partitions.bin").read_bytes(), "historical layout incompatible"
         print(f"Historical USB bundle verified: {version} (original bytes, preserve-data default)")
@@ -74,9 +73,10 @@ def check_archived_releases(folder: Path, current_partitions: Path | None = None
     return catalog["releases"]
 
 
-def check(folder: Path) -> None:
+def check(folder: Path, require_site: bool = True) -> None:
     manifest = json.loads((folder / "manifest.json").read_text(encoding="utf-8"))
     assert manifest.get("new_install_prompt_erase") is True, "flasher must preserve user data"
+    assert manifest.get("readll_delivery") == {"webusb_enabled": True, "tf_enabled": True}
     builds = manifest.get("builds")
     assert isinstance(builds, list) and len(builds) == 1
     assert builds[0].get("chipFamily") == "ESP32-S3"
@@ -93,8 +93,8 @@ def check(folder: Path) -> None:
         assert data and len(data) <= end - start, f"invalid size for {name}"
         print(f"{name}: {len(data)} bytes, SHA256 {hashlib.sha256(data).hexdigest()}")
     assert seen == set(EXPECTED)
-    # 升级兼容性门禁：实际双槽分区、应用描述、基础包能力及升级 SHA 必须一致。
-    # Upgrade gate: real slots, app description, base capability and upgrade SHA must agree.
+    # 本地升级门禁：实际双槽分区、应用描述与 TF 包必须一致。
+    # Local-update gate: real slots, app description and TF package must agree.
     entries = {}
     table = (folder / "partitions.bin").read_bytes()
     for offset in range(0, len(table) - 31, 32):
@@ -111,28 +111,37 @@ def check(folder: Path) -> None:
     assert struct.unpack_from("<I", image, 32)[0] == 0xabcd5432, "missing app description"
     version = image[48:80].split(b"\0")[0].decode("ascii")
     project = image[80:112].split(b"\0")[0].decode("ascii")
-    assert version == manifest["version"] and project == "Read_Pico", "base version mismatch"
+    assert version == manifest["version"] and project == "readll", "base version mismatch"
     assert re.fullmatch(r"\d+\.\d+\.\d+(?:-rc\d+)?", version), "invalid release version"
-    capability = manifest.get("pico_ota", {})
-    assert capability.get("layout") == "pico-dual-4m-v1"
+    capability = manifest.get("readll_ota", {})
+    assert capability.get("layout") == "readll-dual-4m-v1"
     assert capability.get("base_version") == version and capability.get("rollback") is True
-    assert capability.get("minimum_base_version") == "0.3.3-rc72"
-    assert capability.get("online_ota_base_version") == "0.3.3-rc79"
-    assert b"PICO_HTTPS_OTA_V1" in image, "base package cannot perform online upgrades"
-    feed = json.loads((folder / "update.json").read_text())
-    upgrade_name = f"Pico-update-{version}.bin"
-    assert feed["schema"] == 1 and feed["version"] == version and feed["project"] == project
-    assert feed["board"] == "RDP-G01-W" and feed["layout"] == capability["layout"]
-    assert feed["minimum_base_version"] == capability["minimum_base_version"]
-    assert feed["url"] in (f"https://wegooo-cell.github.io/read-pico-reader/{upgrade_name}", f"https://kiikoread.com/{upgrade_name}")
-    assert feed["size"] == len(image) and feed["sha256"] == hashlib.sha256(image).hexdigest()
-    assert (folder / "Pico-update.bin").read_bytes() == image
+    assert capability.get("online_enabled") is False
+    feed = json.loads((folder / "update.json").read_text(encoding="utf-8"))
+    upgrade_name = f"readll-update-{version}.bin"
+    assert feed == {"schema": 1, "enabled": False, "project": project, "version": version,
+                    "message": "在线升级尚未配置"}
+    assert (folder / "readll-update.bin").read_bytes() == image
     assert (folder / upgrade_name).read_bytes() == image
-    print(f"OTA base/TF/feed compatible: {version}, {capability['layout']}")
-    assert (folder / "index.html").is_file()
-    assert (folder / "vendor/web/install-button.js").is_file()
-    assert (folder / "licenses/LUCIDE-ISC.txt").is_file()
-    check_archived_releases(folder)
+    assets = json.loads((folder / "release-assets.json").read_text(encoding="utf-8"))
+    assert assets["schema"] == "readll.release-assets.v1"
+    assert assets["project"] == project and assets["version"] == version
+    expected_assets = set(EXPECTED) | {"readll-update.bin", upgrade_name}
+    assert set(assets["files"]) == expected_assets
+    for name, metadata in assets["files"].items():
+        data = (folder / name).read_bytes()
+        assert metadata == {"size": len(data), "sha256": hashlib.sha256(data).hexdigest()}
+    checksum_lines = (folder / "SHA256SUMS.txt").read_text(encoding="ascii").splitlines()
+    assert set(checksum_lines) == {
+        f"{assets['files'][name]['sha256']}  {name}" for name in expected_assets
+    }
+    print(f"WebUSB/USB/TF release assets compatible; device online OTA disabled: {version}, {capability['layout']}")
+    if require_site:
+        index = (folder / "index.html").read_text(encoding="utf-8")
+        assert '<esp-web-install-button' in index and 'manifest="./manifest.json"' in index
+        assert (folder / "vendor/web/install-button.js").is_file()
+        assert (folder / "licenses/LUCIDE-ISC.txt").is_file()
+        check_archived_releases(folder)
 
 
 if __name__ == "__main__":

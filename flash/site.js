@@ -26,7 +26,7 @@
   if (screen) {
     function showPreview(item) {
       screen.src = `./assets/screens/${item.asset}.png`;
-      screen.alt = `kiikoread ${item.label}界面预览`;
+      screen.alt = `readll ${item.label}界面预览`;
       document.getElementById("screen-caption").textContent = item.caption;
       document.getElementById("screen-open").setAttribute("aria-label", `放大${item.label}界面`);
     }
@@ -78,12 +78,12 @@
     "0.3.3-rc85": ["优化阅读翻页显示效果", "优化蓝牙翻页器适配与按键识别", "隐藏没有广播名称的蓝牙设备"]
   };
   for (const [name, message] of [["loading", "正在读取所选版本的更新说明…"], ["unavailable", "所选版本暂不可用，请重选版本或刷新页面。"]]) {
-    document.addEventListener(`kiikoread:release-${name}`, () => {
+    document.addEventListener(`readll:release-${name}`, () => {
       document.getElementById("release-notes-title").textContent = "更新日志";
       document.getElementById("release-notes-list").replaceChildren(Object.assign(document.createElement("li"), {textContent:message}));
     });
   }
-  document.addEventListener("kiikoread:release", async event => {
+  document.addEventListener("readll:release", async event => {
     const {manifest, latest} = event.detail;
     const list = document.getElementById("release-notes-list");
     document.getElementById("release-notes-title").textContent = `${manifest.version.split("-").pop()} · 更新日志`;

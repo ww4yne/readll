@@ -26,19 +26,19 @@ idf.py build
 
 ### 版本号与本地测试 / Versions and local tests
 
-用户 2026-10-06 确认：本地测试沿用当前正式发布的固件版本号，用测试日期和说明区分；正式上线时才递增版本号，并同步设备、刷机页、升级包与日志。不要为每次本地修复另增 rc 编号。
-Per the user's 2026-10-06 decision, local tests retain the current published firmware version and are distinguished by test date and notes. Increment only for publication, keeping the device, flasher, upgrade image and changelog in sync; do not add an rc for each local fix.
+用户 2026-10-14 确认：本仓库是独立的新固件 `readll`，技术标识、产品/UI、文档、网页、构建产物与未来仓库名统一使用小写 `readll`；不兼容旧产品包是明确选择。
+Per the user's 2026-10-14 decision, this repository is the independent new `readll` firmware. Technical identifiers, product/UI text, documentation, website, build artifacts and the future repository name all use lowercase `readll`; incompatibility with legacy product packages is intentional.
 
-本地包放在被忽略的构建目录，禁止用同版本的测试二进制覆盖 `flash/` 中已经发布的固定版本下载文件。联网 OTA 需要不同版本号的专项测试时，先获得用户对该测试版本的明确授权。
-Keep local bundles in ignored build directories; never replace immutable published downloads in `flash/` with a same-version test image. Use a different version for an OTA-specific test only when explicitly authorized by the user.
+本地测试包放在被忽略的构建目录。迁移期间保留 USB 与 TF 包生成和校验；不得把测试二进制当作正式发布文件。
+Keep local test bundles in ignored build directories. USB and TF package generation and verification remain supported during migration; never treat test binaries as published artifacts.
 
 ### 正式版发布 / Official releases
 
-用户 2026-10-09 确认：之后每次发布正式版，都在 `wegooo-cell/read-pico-reader` 创建对应版本的 Git tag 和 GitHub Release，附上经验证的 TF/OTA 应用 Bin、完整 USB 刷机包、SHA-256 校验值和简要更新日志；所有附件来自同一次正式构建。
-Per the user's 2026-10-09 decision, publish every future official firmware version with a matching Git tag and GitHub Release in `wegooo-cell/read-pico-reader`. Attach the verified TF/OTA application Bin, complete USB flash bundle, SHA-256 checksums and brief release notes, all from the same official build.
+正式发布目标仓库将命名为 `readll`。发布流程尚未启用；启用后，TF 应用 Bin、完整 USB 刷机包、SHA-256 校验值和简要更新日志必须来自同一次正式构建。
+The official release repository will be named `readll`. Publishing is not enabled yet; once enabled, the TF application binary, complete USB flash bundle, SHA-256 checksums and concise release notes must come from the same official build.
 
-GitHub Release 与官网刷机、TF 下载和联网 OTA 同步发布。保留官网现有刷机清单、固件及版本下载地址；OTA 清单继续使用固件允许的官方 HTTPS 域名。核对三种交付的版本、大小、校验值和基础包兼容性，避免影响正在刷机或升级的用户。本地测试仍只生成本地包，不创建正式 Release。
-Publish GitHub Releases alongside the web flasher, TF downloads and online OTA. Preserve existing website manifests, firmware and versioned download URLs; keep OTA URLs on the official HTTPS origin accepted by the firmware. Verify matching versions, sizes, checksums and base-layout compatibility across the deliveries so ongoing flashes and updates remain valid. Local tests remain local bundles without official Releases.
+在配置并审核新的 OTA origin 前，仅设备内联网 OTA 必须显式禁用：UI 与调用路径返回“尚未配置”，不得请求任何旧站点或旧仓库，也不得静默回退。WebUSB 网页刷机、静态站 staging、完整 USB 包与 TF 本地升级必须继续可用；不要编造新域名。
+Until a new OTA origin is configured and reviewed, only device-side online OTA is disabled: the UI and call path report “not configured”, never request a legacy website or repository, and never silently fall back. WebUSB flashing, static-site staging, complete USB packages and local TF updates must remain available; do not invent a domain.
 
 ## 目录职责 / Layout
 
@@ -50,6 +50,7 @@ Publish GitHub Releases alongside the web flasher, TF downloads and online OTA. 
 | `main/app/app_registry.c` | 菜单顺序。加页只改这张表。/ Menu table. |
 | `main/app/app_config.h` | 均衡 / ALL_DU 刷新档位。/ Refresh profile. |
 | `main/ui/` | `ui_kit` 排版常量与绘制原语；`ui_menu` 两层菜单。页面互不引用。/ Shared drawing; pages do not include each other. |
+| `main/rss/` | Miniflux API、严格 JSON、离线缓存与同步状态机；页面和配置层通过公开头文件接入。/ Miniflux API, bounded JSON, offline cache and sync state machine exposed through public headers. |
 | `main/font/` | stb_truetype 字形缓存。`fallback.h` 是生成位图，勿手改。/ Glyph cache. Do not edit `fallback.h` by hand. |
 | `main/factory/` | 设备功能自检与出厂 VCOM 标定。/ Device self-test and factory VCOM. |
 | `main/display.*` `sleep.*` `settings.*` | 刷屏封装、睡眠/锁屏、NVS 设置。/ Present helpers, sleep/lock, NVS. |
@@ -72,6 +73,11 @@ Deliver implementation, reproducible tests, feature documentation and necessary 
 
 计划、检查点、过程审查、验收结果和调试日志在 `docs/local/` 或被忽略的构建目录内部闭环，不加入提交。长期有效的行为与限制整理进对应功能文档，不要求读者查内部计划。只有需要交接未完功能或责任时才按 `docs/HANDOFF.md` 提供最小必要摘要；本机账本仍不入库。
 Keep plans, checkpoints, review records, acceptance results and debug logs in ignored `docs/local/` or build directories. Put lasting behavior and limits in feature documentation without dependencies on internal plans. Use `docs/HANDOFF.md` for the minimal necessary handoff of unfinished work or responsibility; the local ledger remains untracked.
+
+RSS 本地回归使用 `.\tools\run_rss_host_tests.ps1`；它不需要真实账户。真机前还必须使用
+ESP-IDF v6.1 和 `sdkconfig.ci` 完整编译。/ Run RSS regressions with
+`.\tools\run_rss_host_tests.ps1`; no real account is required. Before hardware
+testing, also complete an ESP-IDF v6.1 build with `sdkconfig.ci`.
 
 ### demo 页 / Demo pages
 
@@ -164,7 +170,7 @@ Defined in [`main/app/app.h`](main/app/app.h). The loop presents via `app_presen
 
 ## 硬约束 / Hard rules
 
-- 用户 2026-10-09 确认项目品牌为小写 `kiikoread`，网页设备称「墨水屏」，页面底色采用明亮纯白。保留 `wegooo-cell/read-pico-reader` 仓库网址与已发布下载/OTA地址、备份文件名和内部协议标识。用户最新要求固件界面也统一命名，主站 OTA 使用 kiikoread.com，并保留 GitHub 回退源。/ Per the user’s 2026-10-09 decision, use lowercase `kiikoread` for the project and “墨水屏” for devices on the bright-white website. Preserve repository/download/OTA URLs, backup filenames and protocol identifiers. The latest instruction also rebrands the firmware UI, with kiikoread.com as the primary OTA host and GitHub retained as fallback.
+- 用户 2026-10-14 确认本仓库的新固件与模拟器品牌为小写 `readll`；当前目录名只是迁移工作区，不是品牌。旧品牌技术标识必须迁移。硬件上游说明可引用 `wegooo-cell/read-pico-reader` 与 MindReset Read Pico/RDP-G01-W；`read_pico_*` BSP、API 和协议名保留，避免无意义重构。/ Per the user’s 2026-10-14 decision, the new firmware and simulator brand in this repository is lowercase `readll`; the current directory name is only a migration workspace, not a brand. Legacy brand identifiers must be migrated. Hardware provenance may reference `wegooo-cell/read-pico-reader` and MindReset Read Pico/RDP-G01-W; preserve `read_pico_*` BSP, API and protocol names to avoid meaningless refactors.
 
 `冻结 / Frozen:` 段落是产品决策，不是建议。改行为前必须先改这段，并说明为什么决策变了。
 

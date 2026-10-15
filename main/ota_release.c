@@ -32,7 +32,7 @@ static bool version_parts(const char *s, unsigned parts[4]) {
     parts[3] = (unsigned)n;
     return true;
 }
-int pico_version_compare(const char *a, const char *b) {
+int readll_version_compare(const char *a, const char *b) {
     unsigned left[4], right[4];
     if (!version_parts(a, left) || !version_parts(b, right)) return 0;
     for (unsigned i = 0; i < 4; ++i) {
@@ -41,24 +41,10 @@ int pico_version_compare(const char *a, const char *b) {
     }
     return 0;
 }
-bool pico_release_url_valid(const char *url) {
-    // 升级源限定官方 HTTPS 站点，避免重定向泄漏或被替换为任意下载源。
-    // Limit updates to the official HTTPS origin; do not follow arbitrary redirects.
-    static const char *const prefixes[] = {
-        "https://kiikoread.com/", "https://wegooo-cell.github.io/read-pico-reader/"
-    };
-    if (!url || strlen(url) >= 256) return false;
-    const char *name = NULL;
-    for (size_t i = 0; i < sizeof(prefixes) / sizeof(prefixes[0]); ++i) {
-        size_t n = strlen(prefixes[i]);
-        if (!strncmp(url, prefixes[i], n)) { name = url + n; break; }
-    }
-    if (!name) return false;
-    if (!*name || strstr(name, "..") || strchr(name, '/') || strchr(name, '\\')) return false;
-    for (const char *p = name; *p; ++p)
-        if (!isalnum((unsigned char)*p) && *p != '-' && *p != '_' && *p != '.') return false;
-    size_t n = strlen(name);
-    return n > 4 && !strcmp(name + n - 4, ".bin");
+bool readll_release_url_valid(const char *url) {
+    // 新发布源尚未配置，任何 URL 都必须拒绝。/ Reject every URL until a new release origin is configured.
+    (void)url;
+    return false;
 }
 static bool field(const cJSON *root, const char *key, char *out, size_t cap) {
     const cJSON *v = cJSON_GetObjectItemCaseSensitive(root, key);
@@ -66,7 +52,7 @@ static bool field(const cJSON *root, const char *key, char *out, size_t cap) {
     memcpy(out, v->valuestring, strlen(v->valuestring) + 1);
     return true;
 }
-esp_err_t pico_release_parse(const char *json, size_t length, pico_release_t *release) {
+esp_err_t readll_release_parse(const char *json, size_t length, readll_release_t *release) {
     if (!json || !release || !length || length > 8192 || memchr(json, 0, length)) return ESP_ERR_INVALID_ARG;
     memset(release, 0, sizeof(*release));
     const char *end = NULL;
@@ -94,8 +80,8 @@ esp_err_t pico_release_parse(const char *json, size_t length, pico_release_t *re
         cJSON_IsNumber(size) && size->valuedouble >= 288 && size->valuedouble <= 0x400000 &&
         size->valuedouble == (uint32_t)size->valuedouble &&
         version_parts(release->version, version) && version_parts(release->minimum_base_version, base) &&
-        !strcmp(release->board, PICO_OTA_BOARD) && !strcmp(release->layout, PICO_OTA_LAYOUT) &&
-        pico_release_url_valid(release->url) && strlen(release->sha256) == 64;
+        !strcmp(release->board, READLL_OTA_BOARD) && !strcmp(release->layout, READLL_OTA_LAYOUT) &&
+        readll_release_url_valid(release->url) && strlen(release->sha256) == 64;
     if (valid) {
         for (unsigned i = 0; i < 64; ++i)
             if (!isxdigit((unsigned char)release->sha256[i])) valid = false;

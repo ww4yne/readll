@@ -380,11 +380,17 @@ static app_redraw_t on_tick(app_ctx_t* ctx) {
     return APP_REDRAW_PAGE;
 }
 
+static void on_exit(app_ctx_t* ctx) {
+    (void)ctx;
+    if (read_pico_buzzer_score_busy()) (void)read_pico_buzzer_score_stop();
+}
+
 const app_desc_t app_sd = {
     .title = SD_TITLE,
     .detail = "存储卡与蜂鸣器 Storage & Buzzer",
     .render = render,
     .on_enter = on_enter,
+    .on_exit = on_exit,
     .on_touch = on_touch,
     .on_tick = on_tick,
 };

@@ -527,7 +527,7 @@ void app_loop_run(const app_loop_config_t* config) {
             else {
                 ui_quick_action_t action;
                 quick_input_owned = ui_quick_menu_feed(&s_quick, &ctx,
-                    current->render && !current->holds_pmu && !usb_storage_active() && !pico_online_busy(), &action);
+                    current->render && !current->holds_pmu && !usb_storage_active() && !readll_online_busy(), &action);
                 if (quick_input_owned) {
                     held_key = -1;
                     cancel_gesture(&ctx, current, &gesture);
@@ -854,7 +854,7 @@ void app_loop_run(const app_loop_config_t* config) {
         read_pico_transfer_status_t transfer;
         read_pico_transfer_get_status(&transfer);
         const bool wifi_busy = transfer.state != READ_PICO_TRANSFER_STOPPED ||
-            pico_online_busy();
+            readll_online_busy();
         ble_pt_sync(app_settings_ble_turner() && !wifi_busy);
         ble_pt_poll();
         if (s_quick.open || quick_input_owned) {

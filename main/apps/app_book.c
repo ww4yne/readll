@@ -1349,7 +1349,7 @@ static void draw_import(uint8_t* fb) {
     static const char *titles[] = {"浏览 TF 卡", "WiFi 传书", "热点传书", "USB 读卡"};
     static const char *details[] = {
         "查看目录，打开或管理已有图书", "手机与墨水屏连接同一网络",
-        "连接 kiikoread 热点后上传图书", "连接电脑，把图书放入 books 文件夹"
+        "连接 readll 热点后上传图书", "连接电脑，把图书放入 books 文件夹"
     };
     for (int i = 0; i < 4; ++i) {
         EpdRect r = import_rect(i);

@@ -1,32 +1,29 @@
 #!/usr/bin/env python3
-"""Fetch immutable official Release assets with bounded sizes and SHA-256 checks.
-中文：正式二进制来自 Release；站点镜像逐一验证，不写回源码目录。
-English: Release binaries are verified into the site staging directory, never back into source.
+"""Copy explicitly provided local release assets with bounded sizes and SHA-256 checks.
+中文：未配置远端发布仓库；只接受源码目录中已提供并校验的本地文件。
+English: No remote release repository is configured; accept only verified local files.
 """
 from pathlib import Path
-from urllib.request import Request, urlopen
 import hashlib
 import json
 import re
 import shutil
-import time
-
-REPO = 'https://github.com/wegooo-cell/read-pico-reader/releases/download/'
 
 def hydrate(source: Path, output: Path) -> None:
-    catalog = source / 'release-assets.json'
+    catalog = source / 'release-sources.json'
     if not catalog.is_file():
         return
-    release = json.loads(catalog.read_text())
-    assert re.fullmatch(r'v\d+\.\d+\.\d+-rc\d+', release['tag'])
-    assert release['tag'] == 'v' + json.loads((source / 'manifest.json').read_text())['version']
+    release = json.loads(catalog.read_text(encoding='utf-8'))
+    assert release.get('schema') == 'readll.release-sources.v1'
+    assert re.fullmatch(r'v\d+\.\d+\.\d+(?:-rc\d+)?', release['tag'])
+    assert release['tag'] == 'v' + json.loads((source / 'manifest.json').read_text(encoding='utf-8'))['version']
     _hydrate_files(source, output, release)
     # 中文：旧固定网址继续从原 Release 取字节，不能被当前版本别名覆盖。
     # English: Keep immutable older URLs backed by their original Release, not current aliases.
     seen = set(release['files'])
     for historical in release.get('historical', []):
-        assert re.fullmatch(r'v\d+\.\d+\.\d+-rc\d+', historical['tag'])
-        expected = 'Pico-update-' + historical['tag'][1:] + '.bin'
+        assert re.fullmatch(r'v\d+\.\d+\.\d+(?:-rc\d+)?', historical['tag'])
+        expected = 'readll-update-' + historical['tag'][1:] + '.bin'
         assert set(historical['files']) == {expected} and expected not in seen
         seen.add(expected)
         _hydrate_files(source, output, historical)
@@ -49,17 +46,4 @@ def _hydrate_files(source: Path, output: Path, release: dict) -> None:
             assert cached.stat().st_size == info['size'] and hashlib.sha256(cached.read_bytes()).hexdigest() == info['sha256'], 'Release alias checksum mismatch'
             shutil.copy2(cached, target)
             continue
-        url = REPO + release['tag'] + '/' + asset
-        for attempt in range(3):
-            try:
-                # Size cap also applies to a malicious/unexpected upstream response.
-                # 大小上限也约束非预期响应，避免无限读入内存。
-                with urlopen(Request(url, headers={'User-Agent':'kiikoread-publisher'}), timeout=30) as response:
-                    data = response.read(info['size'] + 1)
-                assert len(data) == info['size'] and hashlib.sha256(data).hexdigest() == info['sha256'], 'Release asset checksum mismatch'
-                target.write_bytes(data)
-                fetched[asset] = target
-                break
-            except Exception:
-                if attempt == 2: raise
-                time.sleep(5)
+        raise FileNotFoundError(f"local release asset is not configured: {asset}")

@@ -56,8 +56,8 @@ static enum EpdDrawError epd_draw_base(EpdRect a,const uint8_t *diff,EpdRect cro
  ++phase_calls;return failure;
 }
 static bool main_nav_geometry(void){return true;}
-static bool pico_online_display_begin(void){++ota_depth;return true;}
-static void pico_online_display_end(bool held){assert(held&&ota_depth==1);--ota_depth;}
+static bool readll_online_display_begin(void){++ota_depth;return true;}
+static void readll_online_display_end(bool held){assert(held&&ota_depth==1);--ota_depth;}
 static void display_main_transition_cancel(void){}
 static void epd_poweron(void){}
 static void rails_keepalive(void){}

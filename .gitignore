@@ -53,7 +53,7 @@ tools/buzzer_score_wav
 !/flash/partitions.bin
 !/flash/firmware.bin
 !/flash/ota_data_initial.bin
-!/flash/Pico-update*.bin
+!/flash/readll-update*.bin
 !/flash/releases/*/bootloader.bin
 !/flash/releases/*/partitions.bin
 !/flash/releases/*/ota_data_initial.bin
@@ -113,10 +113,10 @@ Desktop.ini
 *.suo       # Visual Studio Solution User Options
 *.sln.docstates # Visual Studio
 
-# Official binaries live in Releases; local packages are hydrated for website builds.
+# Generated readll USB/TF package files stay outside source control.
 /flash/firmware.bin
 /flash/bootloader.bin
 /flash/partitions.bin
 /flash/ota_data_initial.bin
-/flash/Pico-update.bin
-/flash/Pico-update-*.bin
+/flash/readll-update.bin
+/flash/readll-update-*.bin

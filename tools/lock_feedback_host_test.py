@@ -43,7 +43,7 @@ void epd_draw_pixel(int x,int y,uint8_t c,uint8_t *fb){
 }
 static unsigned pixel(const uint8_t *fb,int x,int y){size_t at=offset(x,y);return(fb[at/2]>>((at&1)*4))&15;}
 static unsigned app_settings_lock_style(void){return style;}
-static bool pico_online_busy(void){return online;}
+static bool readll_online_busy(void){return online;}
 static void read_pico_transfer_get_status(read_pico_transfer_status_t *s){s->state=transfer;}
 static uint8_t* epd_hl_get_framebuffer(EpdiyHighlevelState *h){assert(h);return missing?NULL:frame;}
 static void display_main_transition_cancel(void){++cancels;}
@@ -90,7 +90,7 @@ int main(int argc,char **argv){
  return 0;
 }
 '''
-with tempfile.TemporaryDirectory(prefix='kiikoread-lock-feedback-', dir='/private/tmp') as folder:
+with tempfile.TemporaryDirectory(prefix='readll-lock-feedback-', dir='/private/tmp') as folder:
     work = Path(folder)
     (work/'test.c').write_text(unit)
     subprocess.run(['cc','-std=c11','-Wall','-Wextra','-Werror','-g','-fsanitize=address,undefined',

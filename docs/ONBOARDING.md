@@ -97,7 +97,7 @@ docker run --rm -v ${PWD}:/workspaces/read_pico_firmware -w /workspaces/read_pic
 ```
 
 - 第一次 pull 体积大；全量 build 约 786 个编译步骤，耐心等到 `Project build complete`。中途看进度：另开终端 `docker ps` 找容器名，`docker logs --tail 50 <name>`。
-- 产物落在宿主 `build/`：`bootloader/bootloader.bin`、`partition_table/partition-table.bin`、`Read_Pico.bin`（app，约 1.9 MB）以及 `flash_args`。
+- 产物落在宿主 `build/`：`bootloader/bootloader.bin`、`partition_table/partition-table.bin`、`readll.bin`（app，约 1.9 MB）以及 `flash_args`。
 - 容器 build 的副作用（Windows 检出）：`dependencies.lock` 会以 LF 写回，`git status` 显示 `M`。用 `git diff --ignore-cr-at-eol -- dependencies.lock` 确认无内容差异后 `git checkout -- dependencies.lock`。若内容真变了（如版本被改成 6.2.0），说明用错了镜像，回退并换 v6.1。
 - 网络：`docker pull` 报 `TLS handshake timeout` / `failed to fetch oauth token` 是 Docker Hub 链路问题，配置代理后重试，不是镜像不存在。
 
@@ -127,10 +127,10 @@ python -m serial.tools.miniterm COMx 115200     # Ctrl+] 退出，看开机日�
 --flash-mode dio --flash-freq 80m --flash-size 16MB
 0x0 bootloader/bootloader.bin
 0x8000 partition_table/partition-table.bin
-0x10000 Read_Pico.bin
+0x10000 readll.bin
 ```
 
-`Read_Pico.bin` 只是 app，**必须落在 0x10000**。把它写到 `0x0` 会覆盖 bootloader、分区表、NVS、phy_init，设备不再启动——而墨水屏会保留上一帧画面，看起来"没坏"。这个错误已经在实测中发生过一次，用上面的命令全量重写后恢复（§13.2）。想要单文件烧写，先 `idf.py merge-bin` 生成合并镜像再写 0x0。
+`readll.bin` 只是 app，**必须落在 0x10000**。把它写到 `0x0` 会覆盖 bootloader、分区表、NVS、phy_init，设备不再启动——而墨水屏会保留上一帧画面，看起来"没坏"。这个错误已经在实测中发生过一次，用上面的命令全量重写后恢复（§13.2）。想要单文件烧写，先 `idf.py merge-bin` 生成合并镜像再写 0x0。
 
 实测踩坑：
 - 端口写 `COMx`，**不要写 `\\.\COMx`**。后者在 esptool 5.x 下报 `Failed to get VID/PID` + `Write timeout`，很容易被误判成"没进下载模式"。
@@ -562,8 +562,8 @@ Read AGENTS.md, then docs/ONBOARDING.md, then docs/HANDOFF.md. Do not duplicate 
 | esptool `Connecting...` 一直不动 | 拔插 USB 重试；确认没开着 monitor / miniterm；先跑 `chip-id` 做只读握手 |
 | 烧写 `could not open port` | 其他 monitor / 串口工具占用；或设备在深睡——先按电源键 |
 | 唤醒后 PC 看不到 COM 口 | §3.6 官方三步 |
-| 烧完屏幕还是旧画面、串口没日志 | 墨水屏保留上一帧，设备可能根本没启动。查烧写命令的地址：`Read_Pico.bin` 是不是被写到了 `0x0` |
-| **把 `Read_Pico.bin` 写到了 `0x0`**（bootloader / 分区表 / NVS 已被覆盖，屏幕无响应） | 恢复：`cd build; python -m esptool --chip esp32s3 -p COMx -b 460800 --before default-reset --after hard-reset write-flash '@flash_args'`，三段镜像重新归位。实测一次即恢复。NVS 内容（睡眠模式 / 字体 / 自检结果）丢失回默认；VCOM 在 PMU，不受影响。烧完看串口确认 §3.4 的三行判据 |
+| 烧完屏幕还是旧画面、串口没日志 | 墨水屏保留上一帧，设备可能根本没启动。查烧写命令的地址：`readll.bin` 是不是被写到了 `0x0` |
+| **把 `readll.bin` 写到了 `0x0`**（bootloader / 分区表 / NVS 已被覆盖，屏幕无响应） | 恢复：`cd build; python -m esptool --chip esp32s3 -p COMx -b 460800 --before default-reset --after hard-reset write-flash '@flash_args'`，三段镜像重新归位。实测一次即恢复。NVS 内容（睡眠模式 / 字体 / 自检结果）丢失回默认；VCOM 在 PMU，不受影响。烧完看串口确认 §3.4 的三行判据 |
 
 ### 13.3 固件运行
 

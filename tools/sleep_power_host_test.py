@@ -76,7 +76,7 @@ static int cst836u_get_mode(void *h) { assert(h == s_tp); return tp_mode; }
 static int cst836u_set_mode(void *h, int m) { assert(h == s_tp); tp_mode = m; return ESP_OK; }
 static int cst836u_wake(void *h) { assert(h == s_tp); assert(config[0] == 0x64 && config[1] == 0xff); tp_mode = CST836U_MODE_NORMAL; ++touch_wakes; return ESP_OK; }
 static int sleep_cpu_configure(bool enabled) { assert(enabled); ++cpu_requests; return ESP_OK; }
-static bool pico_online_busy(void) { return ota; }
+static bool readll_online_busy(void) { return ota; }
 static bool read_pico_transfer_pause_for_sleep(void) { ++pauses; return transfer_ok; }
 static void read_pico_transfer_resume_after_sleep(void) { ++resumes; }
 static int ble_pt_stop(int timeout) { assert(timeout == 2000); ++radio_stops; return ESP_OK; }

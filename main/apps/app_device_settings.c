@@ -144,11 +144,11 @@ static char s_font_sync_path[TTF_FONT_PATH_MAX];
 static bool s_config_confirm;
 static bool s_boot_pending;
 static bool s_upgrade_confirm, s_upgrade_online, s_local_pending, s_upgrade_restart;
-static pico_ota_info_t s_local_update;
-static EXT_RAM_BSS_ATTR pico_update_status_t s_update;
+static readll_ota_info_t s_local_update;
+static EXT_RAM_BSS_ATTR readll_update_status_t s_update;
 static char s_upgrade_notice[96];
 static uint32_t s_update_drawn_percent, s_update_drawn_at;
-static pico_update_state_t s_update_drawn_state;
+static readll_update_state_t s_update_drawn_state;
 static bool s_update_drawn_busy, s_upgrade_offer_pending;
 typedef enum { UPGRADE_JOB_NONE, UPGRADE_JOB_CHECK, UPGRADE_JOB_DOWNLOAD } upgrade_job_t;
 static upgrade_job_t s_upgrade_job;
@@ -166,10 +166,10 @@ static void upgrade_remember(uint32_t now) {
 // 结果等任务收尾后一次显示；进度只在五秒且增长五个百分点后补画新增像素。
 // Show results once after worker cleanup; append progress after five seconds and five percentage points.
 static app_redraw_t upgrade_status_redraw(uint32_t now) {
-    bool downloading = s_update.state == PICO_UPDATE_DOWNLOADING;
-    if (s_update.busy && s_update.state != PICO_UPDATE_CHECKING && !downloading)
+    bool downloading = s_update.state == READLL_UPDATE_DOWNLOADING;
+    if (s_update.busy && s_update.state != READLL_UPDATE_CHECKING && !downloading)
         return APP_REDRAW_NONE;
-    bool offer = s_upgrade_offer_pending && !s_update.busy && s_update.state == PICO_UPDATE_AVAILABLE;
+    bool offer = s_upgrade_offer_pending && !s_update.busy && s_update.state == READLL_UPDATE_AVAILABLE;
     if (offer) {
         s_upgrade_offer_pending = false;
         s_upgrade_confirm = s_upgrade_online = true;
@@ -214,7 +214,7 @@ static void draw_upgrade_progress_delta(uint8_t *fb) {
 // Scheduling changes only the UI snapshot; start TLS/flash on the tick after its presentation.
 static void upgrade_schedule(bool downloading, uint32_t now) {
     s_upgrade_job = downloading ? UPGRADE_JOB_DOWNLOAD : UPGRADE_JOB_CHECK;
-    s_update.state = downloading ? PICO_UPDATE_DOWNLOADING : PICO_UPDATE_CHECKING;
+    s_update.state = downloading ? READLL_UPDATE_DOWNLOADING : READLL_UPDATE_CHECKING;
     s_update.busy = true;
     s_update.received = 0;
     snprintf(s_update.message, sizeof(s_update.message), "%s", downloading
@@ -227,13 +227,13 @@ static app_redraw_t upgrade_start_pending(void) {
     s_upgrade_job = UPGRADE_JOB_NONE;
     app_home_cover_mode_changed();
     app_book_cover_mode_changed();
-    esp_err_t error = downloading ? pico_online_download() : pico_online_check();
-    pico_online_get_status(&s_update);
+    esp_err_t error = downloading ? readll_online_download() : readll_online_check();
+    readll_online_get_status(&s_update);
     if (error == ESP_OK) return APP_REDRAW_NONE;
     s_upgrade_offer_pending = false;
     s_update.busy = false;
-    if (s_update.state != PICO_UPDATE_FAILED) s_update.message[0] = 0;
-    s_update.state = PICO_UPDATE_FAILED;
+    if (s_update.state != READLL_UPDATE_FAILED) s_update.message[0] = 0;
+    s_update.state = READLL_UPDATE_FAILED;
     if (!s_update.message[0]) snprintf(s_update.message, sizeof(s_update.message), "无法开始升级，请退出传书后重试");
     snprintf(s_upgrade_notice, sizeof(s_upgrade_notice), "%s", s_update.message);
     return APP_REDRAW_PAGE;
@@ -283,8 +283,8 @@ static EpdRect upgrade_confirm_button(bool online, bool accept) {
     return (EpdRect){accept ? 364 : 60, online ? 842 : 613, 260, 64};
 }
 static void upgrade_open(void) {
-    (void)pico_ota_inspect(PICO_OTA_UPDATE_PATH, &s_local_update);
-    pico_online_get_status(&s_update);
+    (void)readll_ota_inspect(READLL_OTA_UPDATE_PATH, &s_local_update);
+    readll_online_get_status(&s_update);
     s_upgrade_confirm = s_local_pending = s_upgrade_restart = false;
     s_upgrade_offer_pending = false;
     s_upgrade_job = UPGRADE_JOB_NONE;
@@ -1171,11 +1171,12 @@ static void render(app_ctx_t *ctx, uint8_t *fb) {
             snprintf(detail, sizeof(detail), "%s", s_update.message[0] ? s_update.message : "连接 WiFi，检查官网发布的新版本");
             fit_value(detail, 540);
             ui_text(fb, 60, 436, 21, detail, EPD_DRAW_ALIGN_LEFT, false);
-            if (s_update.state == PICO_UPDATE_AVAILABLE)
+            if (s_update.state == READLL_UPDATE_AVAILABLE)
                 ui_text(fb, 60, 477, 24, s_update.release.version, EPD_DRAW_ALIGN_LEFT, false);
-            if (s_update.state == PICO_UPDATE_DOWNLOADING) draw_upgrade_progress(fb);
-            ui_draw_button(fb, (EpdRect){60, 550, 564, 62}, s_update.busy ? "取消联网更新" :
-                s_update.state == PICO_UPDATE_AVAILABLE ? "开始更新" : "检查更新", s_update.state == PICO_UPDATE_AVAILABLE);
+            if (s_update.state == READLL_UPDATE_DOWNLOADING) draw_upgrade_progress(fb);
+            ui_draw_button(fb, (EpdRect){60, 550, 564, 62}, READLL_OTA_ONLINE_CONFIGURED ?
+                (s_update.busy ? "取消联网更新" : s_update.state == READLL_UPDATE_AVAILABLE ? "开始更新" : "检查更新") :
+                "尚未配置", s_update.state == READLL_UPDATE_AVAILABLE);
             settings_card(fb, (EpdRect){36, 662, 612, 262}, 22, UI_GRAY_WHITE, 0x70);
             ui_text(fb, 60, 689, 29, "TF 卡升级", EPD_DRAW_ALIGN_LEFT, false);
             ui_text(fb, 60, 739, 23, "升级包放在 TF 卡根目录", EPD_DRAW_ALIGN_LEFT, false);
@@ -1593,14 +1594,14 @@ static app_redraw_t on_tick(app_ctx_t *ctx) {
         if (s_upgrade_job != UPGRADE_JOB_NONE) return upgrade_start_pending();
         if (s_local_pending) {
             s_local_pending = false;
-            esp_err_t error = pico_ota_install(PICO_OTA_UPDATE_PATH, s_upgrade_notice, sizeof(s_upgrade_notice));
+            esp_err_t error = readll_ota_install(READLL_OTA_UPDATE_PATH, s_upgrade_notice, sizeof(s_upgrade_notice));
             s_upgrade_restart = error == ESP_OK;
             return APP_REDRAW_PAGE;
         }
-        pico_online_get_status(&s_update);
-        if (s_update.state == PICO_UPDATE_READY && !s_update.busy) {
-            if (pico_online_commit() == ESP_OK) { esp_restart(); return APP_REDRAW_NONE; }
-            pico_online_get_status(&s_update);
+        readll_online_get_status(&s_update);
+        if (s_update.state == READLL_UPDATE_READY && !s_update.busy) {
+            if (readll_online_commit() == ESP_OK) { esp_restart(); return APP_REDRAW_NONE; }
+            readll_online_get_status(&s_update);
         }
         uint32_t now = esp_timer_get_time() / 1000;
         app_redraw_t redraw = upgrade_status_redraw(now);
@@ -1749,11 +1750,11 @@ static app_redraw_t on_gesture(app_ctx_t *ctx, const ui_gesture_event_t *ev) {
             s_upgrade_job = UPGRADE_JOB_NONE;
             s_upgrade_offer_pending = false;
             if (s_upgrade_confirm) s_upgrade_confirm = false;
-            else { pico_online_cancel_join(); s_page = SETTINGS_MAIN; }
+            else { readll_online_cancel_join(); s_page = SETTINGS_MAIN; }
             return APP_REDRAW_PAGE;
         }
         int tab = ui_nav_hit(ev->x0, y);
-        if (tab >= 0) { s_upgrade_job = UPGRADE_JOB_NONE; pico_online_cancel_join(); ui_nav_request(ctx, tab); return APP_REDRAW_NONE; }
+        if (tab >= 0) { s_upgrade_job = UPGRADE_JOB_NONE; readll_online_cancel_join(); ui_nav_request(ctx, tab); return APP_REDRAW_NONE; }
         if (s_upgrade_confirm) {
             bool accept = ui_rect_hit(upgrade_confirm_button(s_upgrade_online, true), ev->x0, y);
             if (accept || ui_rect_hit(upgrade_confirm_button(s_upgrade_online, false), ev->x0, y)) {
@@ -1771,18 +1772,22 @@ static app_redraw_t on_gesture(app_ctx_t *ctx, const ui_gesture_event_t *ev) {
         if (ev->x0 < 60 || ev->x0 >= 624) return APP_REDRAW_NONE;
         if (y >= 550 && y < 612) {
             s_upgrade_notice[0] = 0;
-            if (s_update.busy) { s_upgrade_job = UPGRADE_JOB_NONE; s_upgrade_offer_pending = false; pico_online_cancel_join(); }
-            else if (s_update.state == PICO_UPDATE_AVAILABLE) { s_upgrade_confirm = true; s_upgrade_online = true; }
+            if (!READLL_OTA_ONLINE_CONFIGURED) {
+                snprintf(s_upgrade_notice, sizeof(s_upgrade_notice), "在线升级尚未配置");
+                return APP_REDRAW_PAGE;
+            }
+            if (s_update.busy) { s_upgrade_job = UPGRADE_JOB_NONE; s_upgrade_offer_pending = false; readll_online_cancel_join(); }
+            else if (s_update.state == READLL_UPDATE_AVAILABLE) { s_upgrade_confirm = true; s_upgrade_online = true; }
             else {
                 upgrade_schedule(false, esp_timer_get_time() / 1000);
                 return APP_REDRAW_PAGE;
             }
-            pico_online_get_status(&s_update);
+            readll_online_get_status(&s_update);
             upgrade_remember(esp_timer_get_time() / 1000);
             return APP_REDRAW_PAGE;
         }
         if (y >= 840 && y < 902 && !s_update.busy) {
-            (void)pico_ota_inspect(PICO_OTA_UPDATE_PATH, &s_local_update);
+            (void)readll_ota_inspect(READLL_OTA_UPDATE_PATH, &s_local_update);
             if (s_local_update.ready) { s_upgrade_confirm = true; s_upgrade_online = false; }
             else snprintf(s_upgrade_notice, sizeof(s_upgrade_notice), "%s", s_local_update.message);
             return APP_REDRAW_PAGE;
@@ -2229,7 +2234,7 @@ static app_redraw_t on_key(app_ctx_t *ctx, int key) {
     if (s_page == SETTINGS_UPGRADE) {
         s_upgrade_job = UPGRADE_JOB_NONE;
         if (s_local_pending || s_upgrade_restart) return APP_REDRAW_NONE;
-        pico_online_cancel_join(); s_upgrade_confirm = false;
+        readll_online_cancel_join(); s_upgrade_confirm = false;
     }
     if (s_page == SETTINGS_BLE_SCAN) {
         ble_pt_scan_stop();
@@ -2257,7 +2262,7 @@ static void settings_exit(app_ctx_t *ctx) {
     pin_setup_close();
     s_collage_prepare_pending = false;
     s_upgrade_job = UPGRADE_JOB_NONE;
-    (void)ctx; ui_keyboard_end(); pico_online_cancel_join(); ble_pt_scan_stop(); s_ble_learning = 0;
+    (void)ctx; ui_keyboard_end(); readll_online_cancel_join(); ble_pt_scan_stop(); s_ble_learning = 0;
 }
 static void on_before_lock(app_ctx_t *ctx) {
     settings_scroll_cache_release();
@@ -2265,7 +2270,7 @@ static void on_before_lock(app_ctx_t *ctx) {
     s_font_sync_confirm=false;s_font_sync_path[0]=0;
     if (s_page == SETTINGS_PIN_ENTRY) { pin_setup_close(); s_page = SETTINGS_LOCK_PIN; }
     s_upgrade_job = UPGRADE_JOB_NONE;
-    (void)ctx; pico_online_cancel_join(); ble_pt_scan_stop(); s_ble_learning = 0;
+    (void)ctx; readll_online_cancel_join(); ble_pt_scan_stop(); s_ble_learning = 0;
     (void)ble_pt_stop(2000);
 }
 static bool no_menu_handle(app_ctx_t *ctx) { (void)ctx; return false; }

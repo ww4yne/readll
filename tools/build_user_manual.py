@@ -42,7 +42,7 @@ def build(font_path: Path, pdf_output: Path):
                 figures=''.join(f'<figure><img src="./assets/screens/{key}.png" alt="{escape(caption)}" loading="lazy"><figcaption>{escape(caption)}</figcaption></figure>' for key,caption in zip(b['keys'],b['captions']))
                 blocks.append(f'<div class="manual-cover-preview">{figures}</div>')
         sections.append(f'<section id="{chapter["id"]}"><p class="eyebrow">{i:02d} / GUIDE</p><h2>{escape(chapter["title"])}</h2><p>{escape(chapter["intro"])}</p>'+''.join(blocks)+'</section>')
-    html = f'''<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#ffffff"><meta name="description" content="kiikoread 墨水屏固件中文使用说明：安装、传书、阅读、升级和恢复。"><title>使用说明 · kiikoread</title><link rel="stylesheet" href="./site.css"></head><body><a class="skip" href="#main">跳到正文</a><header class="site-header"><div class="header-inner"><a class="wordmark" href="./index.html">kiikoread<span>.</span></a><nav aria-label="主导航"><a href="./index.html#preview">界面预览</a><a href="./index.html#features">特色功能</a><a href="./manual.html" aria-current="page">使用说明</a></nav><a class="button small primary" href="./index.html#flash-action">刷机与下载 ↗</a></div></header><main id="main"><section class="wrap manual-hero"><p class="eyebrow">THE USER GUIDE</p><h1>用起来，就顺手。</h1><p>从第一次刷机，到传书、阅读与升级。<br>这份说明帮你找到每一步。</p><p class="manual-version">当前正式版 {escape(version)} · {date} · 适用墨水屏 RDP-G01-W</p><a class="text-link" href="./manual/kiikoread-manual.pdf" download>下载中文 PDF <img src="./assets/icons/download.svg" width="18" height="18" alt=""></a></section><div class="wrap manual-layout"><nav class="manual-nav" aria-label="说明书目录">{nav}</nav><div class="manual-body">{''.join(sections)}<a class="button primary" href="./index.html#flash-action">准备好了，去刷机 →</a></div></div></main><footer class="site-footer"><div class="wrap footer-bottom"><span>kiikoread · 基于 MindReset 开源固件，非官方发布</span><span><a href="./notices.html">开源许可</a> / <a href="https://github.com/wegooo-cell/read-pico-reader">GitHub</a></span></div></footer></body></html>'''
+    html = f'''<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#ffffff"><meta name="description" content="readll 墨水屏固件中文使用说明：安装、传书、阅读、升级和恢复。"><title>使用说明 · readll</title><link rel="stylesheet" href="./site.css"></head><body><a class="skip" href="#main">跳到正文</a><header class="site-header"><div class="header-inner"><a class="wordmark" href="./index.html">readll<span>.</span></a><nav aria-label="主导航"><a href="./index.html#preview">界面预览</a><a href="./index.html#features">特色功能</a><a href="./manual.html" aria-current="page">使用说明</a></nav><a class="button small primary" href="./index.html#flash-action">刷机与下载 ↗</a></div></header><main id="main"><section class="wrap manual-hero"><p class="eyebrow">THE USER GUIDE</p><h1>用起来，就顺手。</h1><p>从第一次刷机，到传书、阅读与升级。<br>这份说明帮你找到每一步。</p><p class="manual-version">当前构建 {escape(version)} · {date} · 适用墨水屏 RDP-G01-W</p><a class="text-link" href="./manual/readll-manual.pdf" download>下载中文 PDF <img src="./assets/icons/download.svg" width="18" height="18" alt=""></a></section><div class="wrap manual-layout"><nav class="manual-nav" aria-label="说明书目录">{nav}</nav><div class="manual-body">{''.join(sections)}<a class="button primary" href="./index.html#flash-action">准备好了，去刷机 →</a></div></div></main><footer class="site-footer"><div class="wrap footer-bottom"><span>readll · 基于 MindReset 开源固件，非官方发布</span><span><a href="./notices.html">开源许可</a> / <a href="https://github.com/wegooo-cell/read-pico-reader">硬件上游</a></span></div></footer></body></html>'''
     (FLASH / 'manual.html').write_text(html, encoding='utf-8')
 
     manual_font = TTFont('Manual', str(font_path))
@@ -91,7 +91,7 @@ def build(font_path: Path, pdf_output: Path):
     def page(canvas,doc):
         width,height=A4
         canvas.saveState()
-        canvas.setFillColor(ink); canvas.setFont('Helvetica-Bold',14); canvas.drawString(54,height-35,'kiikoread.')
+        canvas.setFillColor(ink); canvas.setFont('Helvetica-Bold',14); canvas.drawString(54,height-35,'readll.')
         canvas.setFont('Manual',8); canvas.setFillColor(muted); canvas.drawRightString(width-54,height-34,f'使用说明 / {version}')
         canvas.setStrokeColor(line); canvas.setLineWidth(.5); canvas.line(54,height-45,width-54,height-45)
         canvas.line(54,40,width-54,40)
@@ -99,9 +99,9 @@ def build(font_path: Path, pdf_output: Path):
         canvas.setFont('Helvetica',8); canvas.drawRightString(width-54,25,f'{doc.page:02d}')
         canvas.restoreState()
     pdf_output.parent.mkdir(parents=True,exist_ok=True)
-    doc=SimpleDocTemplate(str(pdf_output),pagesize=A4,rightMargin=54,leftMargin=54,topMargin=72,bottomMargin=57,title=content['title'],author='kiikoread / Kiiko')
+    doc=SimpleDocTemplate(str(pdf_output),pagesize=A4,rightMargin=54,leftMargin=54,topMargin=72,bottomMargin=57,title=content['title'],author='readll / readll')
     doc.build(flow,onFirstPage=page,onLaterPages=page)
-    public=FLASH / 'manual/kiikoread-manual.pdf'
+    public=FLASH / 'manual/readll-manual.pdf'
     public.parent.mkdir(exist_ok=True)
     public.write_bytes(pdf_output.read_bytes())
     print(f'Manual HTML and PDF built for {version}: {public.stat().st_size} bytes')
@@ -109,6 +109,6 @@ def build(font_path: Path, pdf_output: Path):
 if __name__=='__main__':
     args=argparse.ArgumentParser()
     args.add_argument('--font',type=Path,required=True)
-    args.add_argument('--pdf-output',type=Path,default=ROOT/'output/pdf/kiikoread-manual.pdf')
+    args.add_argument('--pdf-output',type=Path,default=ROOT/'output/pdf/readll-manual.pdf')
     options=args.parse_args()
     build(options.font,options.pdf_output)

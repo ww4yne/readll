@@ -1,5 +1,5 @@
 {
-  "title": "kiikoread 使用说明",
+  "title": "readll 使用说明",
   "chapters": [
     {
       "id": "start",
@@ -267,7 +267,7 @@
         {
           "kind": "steps",
           "items": [
-            "从官网选择版本并下载应用 Bin，保持文件名 Pico-update.bin。",
+            "从官网选择版本并下载应用 Bin，保持文件名 readll-update.bin。",
             "将文件放到 TF 卡根目录，不放进 books，也不要留成带版本号的文件名。",
             "打开「设置 → 升级和恢复 → 系统升级 → TF 卡升级」，确认目标版本。",
             "保持供电，不拔卡，等待校验、写入和重新启动。"

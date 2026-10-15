@@ -173,6 +173,6 @@ void ui_power_final_draw(uint8_t *fb, bool restarting) {
     ui_clear_page(fb);
     const int cx = UI_LOCK_WIDTH / 2;
     ui_draw_icon(fb, cx, 486, 72, restarting ? UI_ICON_ROTATE_CW : UI_ICON_POWER, UI_GRAY_BLACK);
-    ui_text(fb, cx, 548, 48, restarting ? "正在重启" : "kiikoread 已关机", EPD_DRAW_ALIGN_CENTER, false);
+    ui_text(fb, cx, 548, 48, restarting ? "正在重启" : "readll 已关机", EPD_DRAW_ALIGN_CENTER, false);
     if (!restarting) ui_text(fb, cx, 624, 26, "长按电源键开机", EPD_DRAW_ALIGN_CENTER, false);
 }

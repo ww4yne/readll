@@ -18,8 +18,8 @@ app_main_refresh_mode_t app_settings_main_refresh_mode(void) {return APP_MAIN_RE
 // 所有真实推屏和欠载恢复都必须持有 OTA 互斥锁，包括递归兜底。
 // Every physical scan and underrun recovery must hold OTA exclusion, including recursive fallback.
 static unsigned ota_display_depth;
-bool pico_online_display_begin(void) { ++ota_display_depth; return true; }
-void pico_online_display_end(bool held) { assert(held && ota_display_depth); --ota_display_depth; }
+bool readll_online_display_begin(void) { ++ota_display_depth; return true; }
+void readll_online_display_end(bool held) { assert(held && ota_display_depth); --ota_display_depth; }
 void e0470_page_turn_release(void) {}
 static int turn_tick_us = 21000;
 void e0470_page_turn_set_tick_us(int us) { turn_tick_us = us; }

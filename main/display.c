@@ -521,7 +521,7 @@ static enum EpdDrawError update_display_area_diff_with_unlocked(EpdiyHighlevelSt
 static enum EpdDrawError update_display_area_full_with_unlocked(EpdiyHighlevelState*, const EpdWaveform*, enum EpdDrawMode, EpdRect);
 
 enum EpdDrawError display_follow_area(EpdiyHighlevelState* hl, EpdRect area, bool changed, bool continuous) {
-    bool held = pico_online_display_begin();
+    bool held = readll_online_display_begin();
     display_main_transition_cancel();
     enum EpdDrawError result = EPD_DRAW_SUCCESS;
     if (main_nav_geometry() && area.x == 0 && area.width == 684 &&
@@ -530,7 +530,7 @@ enum EpdDrawError display_follow_area(EpdiyHighlevelState* hl, EpdRect area, boo
             ui_follow_pixels(hl->front_fb, hl->back_fb, epd_width(), epd_height(), area.y, area.y + area.height);
             result = s_full_refresh_requested ? update_display_full_unlocked(hl)
                 : update_display_area_diff_with_unlocked(hl, &E0470_FOLLOW_WAVEFORM, MODE_DU, area);
-            pico_online_display_end(held);
+            readll_online_display_end(held);
             return result;
         }
         if (!s_follow_active) continuous_du_reset();
@@ -554,15 +554,15 @@ enum EpdDrawError display_follow_area(EpdiyHighlevelState* hl, EpdRect area, boo
             }
         }
     } else result = update_display_area_diff_with_unlocked(hl, &E0470_FOLLOW_WAVEFORM, MODE_DU, area);
-    pico_online_display_end(held);
+    readll_online_display_end(held);
     return result;
 }
 enum EpdDrawError display_follow_settle(EpdiyHighlevelState* hl, EpdRect area, bool restore_gray) {
-    bool held = pico_online_display_begin();
+    bool held = readll_online_display_begin();
     // 调用方先排完黑白相位；快刷完成后参考帧已是实际黑白目标。
     // The caller drains binary phases first; the fast-mode reference already holds that completed target.
     if (display_follow_busy()) {
-        pico_online_display_end(held);
+        readll_online_display_end(held);
         return EPD_DRAW_SUCCESS;
     }
     if (s_follow_active) continuous_du_reset();
@@ -571,7 +571,7 @@ enum EpdDrawError display_follow_settle(EpdiyHighlevelState* hl, EpdRect area, b
     enum EpdDrawError result = s_full_refresh_requested ? update_display_full_unlocked(hl)
         : restore_gray ? update_display_area_diff_with_unlocked(hl, &E0470_WAVEFORM, MODE_GL16, area)
         : EPD_DRAW_SUCCESS;
-    pico_online_display_end(held);
+    readll_online_display_end(held);
     return result;
 }
 
@@ -702,67 +702,67 @@ static void guard_draw_result_unlocked(EpdiyHighlevelState* hl, enum EpdDrawErro
 enum EpdDrawError update_display_mode(
     EpdiyHighlevelState* hl, enum EpdDrawMode mode
 ) {
-    bool held = pico_online_display_begin();
+    bool held = readll_online_display_begin();
     enum EpdDrawError result = (s_follow_active || s_full_refresh_requested)
         ? update_display_full_unlocked(hl) : update_display_mode_unlocked(hl, mode);
-    pico_online_display_end(held);
+    readll_online_display_end(held);
     return result;
 }
 
 enum EpdDrawError update_display_mode_diff(
     EpdiyHighlevelState* hl, enum EpdDrawMode mode
 ) {
-    bool held = pico_online_display_begin();
+    bool held = readll_online_display_begin();
     enum EpdDrawError result = (s_follow_active || s_full_refresh_requested)
         ? update_display_full_unlocked(hl) : update_display_mode_diff_unlocked(hl, mode);
-    pico_online_display_end(held);
+    readll_online_display_end(held);
     return result;
 }
 
 enum EpdDrawError update_display_fast_page(EpdiyHighlevelState* hl) {
-    bool held = pico_online_display_begin();
+    bool held = readll_online_display_begin();
     enum EpdDrawError result = (s_follow_active || s_full_refresh_requested)
         ? update_display_full_unlocked(hl) : update_display_fast_page_unlocked(hl);
-    pico_online_display_end(held);
+    readll_online_display_end(held);
     return result;
 }
 
 enum EpdDrawError update_display_from_white_with(
     EpdiyHighlevelState* hl, const EpdWaveform* waveform, enum EpdDrawMode mode
 ) {
-    bool held = pico_online_display_begin();
+    bool held = readll_online_display_begin();
     enum EpdDrawError result = (s_follow_active || s_full_refresh_requested)
         ? update_display_full_unlocked(hl) : update_display_from_white_with_unlocked(hl, waveform, mode);
-    pico_online_display_end(held);
+    readll_online_display_end(held);
     return result;
 }
 
 enum EpdDrawError update_display_from_white(EpdiyHighlevelState* hl) {
-    bool held = pico_online_display_begin();
+    bool held = readll_online_display_begin();
     enum EpdDrawError result = (s_follow_active || s_full_refresh_requested)
         ? update_display_full_unlocked(hl) : update_display_from_white_unlocked(hl);
-    pico_online_display_end(held);
+    readll_online_display_end(held);
     return result;
 }
 
 enum EpdDrawError update_display_white(EpdiyHighlevelState* hl) {
-    bool held = pico_online_display_begin();
+    bool held = readll_online_display_begin();
     if (s_follow_active) continuous_du_reset();
     s_follow_active = s_full_refresh_requested = false;
     enum EpdDrawError result = update_display_white_unlocked(hl);
-    pico_online_display_end(held);
+    readll_online_display_end(held);
     return result;
 }
 
 enum EpdDrawError update_display_full(EpdiyHighlevelState* hl) {
-    bool held = pico_online_display_begin();
+    bool held = readll_online_display_begin();
     enum EpdDrawError result = update_display_full_unlocked(hl);
-    pico_online_display_end(held);
+    readll_online_display_end(held);
     return result;
 }
 
 enum EpdDrawError update_display_reader_cleanup(EpdiyHighlevelState* hl,const EpdWaveform* text_waveform) {
-    bool held=pico_online_display_begin();
+    bool held=readll_online_display_begin();
     if(s_follow_active)continuous_du_reset();
     s_follow_active=s_full_refresh_requested=false;
     display_main_transition_cancel();
@@ -770,24 +770,24 @@ enum EpdDrawError update_display_reader_cleanup(EpdiyHighlevelState* hl,const Ep
     // Erase physically before synchronizing white history; never merely fake the baseline or alter the target.
     use_scan_for(&E0470_WAVEFORM,MODE_GC16);epd_poweron();epd_clear();
     enum EpdDrawError result=update_display_from_white_with_unlocked(hl,text_waveform,MODE_GL16);
-    pico_online_display_end(held);return result;
+    readll_online_display_end(held);return result;
 }
 enum EpdDrawError update_display_image_gray(EpdiyHighlevelState* hl) {
-    bool held = pico_online_display_begin();
+    bool held = readll_online_display_begin();
     if (s_follow_active) continuous_du_reset();
     s_follow_active = s_full_refresh_requested = false;
     enum EpdDrawError result = update_display_image_gray_unlocked(hl);
-    pico_online_display_end(held);
+    readll_online_display_end(held);
     return result;
 }
 
 enum EpdDrawError update_display_with(
     EpdiyHighlevelState* hl, const EpdWaveform* waveform, enum EpdDrawMode mode
 ) {
-    bool held = pico_online_display_begin();
+    bool held = readll_online_display_begin();
     enum EpdDrawError result = (s_follow_active || s_full_refresh_requested)
         ? update_display_full_unlocked(hl) : update_display_with_unlocked(hl, waveform, mode);
-    pico_online_display_end(held);
+    readll_online_display_end(held);
     return result;
 }
 
@@ -795,10 +795,10 @@ enum EpdDrawError update_display_area_with(
     EpdiyHighlevelState* hl, const EpdWaveform* waveform, enum EpdDrawMode mode,
     EpdRect area
 ) {
-    bool held = pico_online_display_begin();
+    bool held = readll_online_display_begin();
     enum EpdDrawError result = (s_follow_active || s_full_refresh_requested)
         ? update_display_full_unlocked(hl) : update_display_area_with_unlocked(hl, waveform, mode, area);
-    pico_online_display_end(held);
+    readll_online_display_end(held);
     return result;
 }
 
@@ -806,10 +806,10 @@ enum EpdDrawError update_display_area_diff_with(
     EpdiyHighlevelState* hl, const EpdWaveform* waveform, enum EpdDrawMode mode,
     EpdRect area
 ) {
-    bool held = pico_online_display_begin();
+    bool held = readll_online_display_begin();
     enum EpdDrawError result = (s_follow_active || s_full_refresh_requested)
         ? update_display_full_unlocked(hl) : update_display_area_diff_with_unlocked(hl, waveform, mode, area);
-    pico_online_display_end(held);
+    readll_online_display_end(held);
     return result;
 }
 
@@ -817,24 +817,24 @@ enum EpdDrawError update_display_area_full_with(
     EpdiyHighlevelState* hl, const EpdWaveform* waveform, enum EpdDrawMode mode,
     EpdRect area
 ) {
-    bool held = pico_online_display_begin();
+    bool held = readll_online_display_begin();
     enum EpdDrawError result = (s_follow_active || s_full_refresh_requested)
         ? update_display_full_unlocked(hl) : update_display_area_full_with_unlocked(hl, waveform, mode, area);
-    pico_online_display_end(held);
+    readll_online_display_end(held);
     return result;
 }
 
 enum EpdDrawError update_display_water_turn(EpdiyHighlevelState* hl, EpdRect area,
                                              e0470_turn_dir_t dir) {
-    bool held = pico_online_display_begin();
+    bool held = readll_online_display_begin();
     enum EpdDrawError result = (s_follow_active || s_full_refresh_requested)
         ? update_display_full_unlocked(hl) : update_display_water_turn_unlocked(hl, area, dir);
-    pico_online_display_end(held);
+    readll_online_display_end(held);
     return result;
 }
 
 void guard_draw_result(EpdiyHighlevelState* hl, enum EpdDrawError result) {
-    bool held = pico_online_display_begin();
+    bool held = readll_online_display_begin();
     guard_draw_result_unlocked(hl, result);
-    pico_online_display_end(held);
+    readll_online_display_end(held);
 }

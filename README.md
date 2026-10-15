@@ -1,18 +1,40 @@
-# kiikoread
+# readll
 
-The public project name is **kiikoread**. The website calls the device an ink-screen reader; the GitHub URL and legacy update/backup filenames remain compatible. Firmware UI branding also uses kiikoread. The bright-white website includes screen previews, features, version selection, web USB flashing, Bin downloads and an [online user manual](flash/manual.html). Stage it with `python3 tools/stage_public_flash.py _site`; both GitHub Pages and Cloudflare Pages can serve `_site`. The PDF can be regenerated from `docs/user-manual.zh-CN.json` with `tools/build_user_manual.py --font /path/to/a/static-CJK.ttf` (Python ReportLab required).
-Official firmware binaries are stored in [GitHub Releases](https://github.com/wegooo-cell/read-pico-reader/releases). The verified site staging step retrieves the matching assets; do not publish the raw flash directory. Device OTA checks `https://kiikoread.com/update.json` first, with the existing GitHub Pages feed as a fallback. Stage the primary site with `python3 tools/stage_public_flash.py _site --ota-origin https://kiikoread.com`; keep the default origin for GitHub Pages.
+[Online WebUSB flasher](https://wegooo-cell.github.io/readll/#flash-action) ·
+[中文说明](README.zh-CN.md) · [日本語](README.ja-JP.md) ·
+[Third-party notices](THIRD_PARTY_NOTICES.md)
 
+`readll` is an independent firmware focused on fast, offline-capable
+Miniflux reading and synchronized read state. It is based on the
+hardware BSP lineage in `wegooo-cell/read-pico-reader` and imports official
+MindReset driver fixes by review rather than replacing product modules.
+RSS setup, compatibility, offline-cache and synchronization behavior are
+documented in [docs/RSS.md](docs/RSS.md).
 
-[简体中文](README.zh-CN.md) · [日本語](README.ja-JP.md) · [Third-party notices](THIRD_PARTY_NOTICES.md)
+The project, firmware UI, simulator, website, build project and package names use lowercase **readll**. `tools/package_flash.py` produces the complete USB/WebUSB parts and TF image from one build; `tools/stage_public_flash.py` creates a self-contained site for any HTTPS static host. Device-side online OTA alone is disabled until a new readll OTA origin is configured, with no legacy request or fallback. The PDF can be regenerated from `docs/user-manual.zh-CN.json` with `tools/build_user_manual.py --font /path/to/a/static-CJK.ttf` (Python ReportLab required).
 
 An independent, open-source reading firmware for the **MindReset RDP-G01-W** ESP32-S3 e-paper board. It is based on [MindReset's official demo firmware](https://github.com/MindReset/read_pico_firmware), but is **not an official MindReset release**.
 
-The current interface has Home, Bookshelf, Files, and Settings. It reads EPUB and TXT books from a TF card, remembers reading progress, and supports Wi-Fi, hotspot, or USB file transfer. The online flasher installs the same firmware image as the local `flash/` bundle.
+The four main tabs remain Home, Bookshelf, Files, and Settings. RSS opens from
+the menu directly into a 12-row Miniflux unread queue, with offline text
+articles, synchronized read state, EPUB-shared typography, and hardware-key
+pagination. The firmware also reads
+EPUB and TXT books from a TF card, remembers reading progress, and supports
+Wi-Fi, hotspot, or USB file transfer.
+
+For local RSS regression tests:
+
+```powershell
+.\tools\run_rss_host_tests.ps1
+```
+
+These tests use a local mock Miniflux service and do not require account
+credentials. Hardware validation remains required for e-paper refresh,
+Wi-Fi/TLS memory peaks, PSRAM, sleep and PMU behavior.
 
 ## Current release: rc92
 
-This release adds selectable clocks, monthly reading records, shelf categories and retained page positions, with smoother inertial scrolling, short clock updates, cached avatars, fine reading weight, vertical reading and page-turner fixes. Tickets use the system font; home and reader titles reuse their respective active fonts at native sizes. USB, TF and OTA share one build and short device notes. rc87 is withdrawn; original rc85/rc86 releases remain selectable. See the [changelog](docs/CHANGELOG.md).
+This release adds selectable clocks, monthly reading records, shelf categories and retained page positions, with smoother inertial scrolling, short clock updates, cached avatars, fine reading weight, vertical reading and page-turner fixes. Tickets use the system font; home and reader titles reuse their respective active fonts at native sizes. USB and TF packages are generated from one build. Online OTA remains unavailable until a new origin is configured. See the [changelog](docs/CHANGELOG.md).
 
 ### Settings, storage and lock fixes
 
@@ -46,11 +68,14 @@ The local build ports [official commit a2a63a6](https://github.com/MindReset/rea
 
 Rename, profile name, status signature, shelf search and WiFi password fields share one keyboard. T9 inputs Chinese Pinyin only; QWERTY supports Chinese/English and case switching. Digits are entered from the numeric panel only. Continuous Pinyin uses 487 offline common phrases, pageable homophones and continuations; select a candidate before saving. Tap text or caret arrows to insert and delete in the middle. Holding backspace for half a second repeats deletion, removing pending Pinyin before text at the caret; release or move away to stop. Ordinary input/deletion refreshes changed regions only. After six candidate-strip changes, a 700 ms touch-free pause triggers one local grayscale settle; typing, held deletion and layout switches defer or cancel it. Keys darken/inset on press and restore on release. T9 More cycles through readings; homophones remain available across batches. The embedded black face covers all 6,763 GB2312 Han characters without a TF font package. WiFi passwords use ASCII QWERTY, digits and symbols. Both AP and STA web transfer pages can save or clear the persistent status signature (up to 95 UTF-8 bytes). These features are included in the rc86 release.
 
-## Online installation
+## WebUSB/USB installation
 
-Select the latest release or the original **rc86 / rc85** build above the connection button. The publication time and TF-image download follow the selection. Ordinary installation keeps the preserve-data default for all versions.
+The published WebUSB page is
+[`https://wegooo-cell.github.io/readll/#flash-action`](https://wegooo-cell.github.io/readll/#flash-action).
+It requires desktop Chrome or Edge, HTTPS, a USB data cable, and the
+RDP-G01-W device.
 
-Visit the [HTTPS web flasher](https://wegooo-cell.github.io/read-pico-reader/). Use a desktop Chrome or Edge browser with a USB data cable. Select the ink-screen reader’s serial device and follow the prompts. **Check the board model before flashing.** Ordinary installation preserves the device's settings and reading records, as well as TF-card contents. It does not include books or sample reading history.
+Generate a package with `py -3 tools/package_flash.py build/readll-package-build build/readll-package`, then stage the web flasher with `py -3 tools/stage_public_flash.py _site --package-dir build/readll-package`. The package's `release-assets.json` is the generated size/SHA-256 manifest; an optional, separately schemed `flash/release-sources.json` maps verified local publication sources. The resulting relative-path site can be deployed to any HTTPS static host. Use desktop Chrome or Edge with a USB data cable and verify the RDP-G01-W model before flashing.
 
 If automatic entry to download mode fails on a device already running this firmware, open **Settings → Upgrade & restore → BOOT flashing** on the device, wait for the computer to detect its serial port again, then retry the web flasher.
 
@@ -58,15 +83,13 @@ The release manifest is [`flash/manifest.json`](flash/manifest.json); it flashes
 
 ## Online updates
 
-Open **Settings → Upgrade & restore → System update → Check for updates** after connecting Wi-Fi. From rc84 onward, the update offer displays short release notes with Later and Start update buttons. Older versions can read the notes on the web flasher before updating to rc84.
-
-The local fix releases off-screen cover caches before online updates and reports insufficient memory safely. Display scans and incremental flash writes are serialized. After at least five seconds and five percentage points of growth, progress appends only newly completed black pixels and updates the percentage, without erasing completed segments or triggering periodic page wipes. Exiting, locking and cancellation still join the worker; failed validation keeps the current boot slot.
+Device-side online OTA is not configured. The system-update page reports **在线升级尚未配置**, and the firmware backend has no feed URL, HTTP request path, or legacy fallback. This does not disable the WebUSB flashing website, complete USB bundle, or TF update image.
 
 ## Local TF-card updates
 
-Local updates require one complete computer installation of an OTA base build so the bootloader and dual-slot partition table are present. That migration keeps the existing settings, reading records, internal-storage addresses, and TF-card contents. Later, copy the application image to the TF-card root as `Pico-update.bin`, then open **Settings → Upgrade & restore → System update → TF-card update**.
+Local updates require one complete computer installation of an OTA base build so the bootloader and dual-slot partition table are present. That migration keeps the existing settings, reading records, internal-storage addresses, and TF-card contents. Later, copy the application image to the TF-card root as `readll-update.bin`, then open **Settings → Upgrade & restore → System update → TF-card update**.
 
-kiikoread checks the image project, version, size, and headers before writing the inactive firmware slot. It selects the new slot only after full image validation. If the new image resets before its first hardware and UI startup check succeeds, the bootloader returns to the previous slot. Keep power connected and the TF card inserted during installation. An application-only update cannot replace the initial OTA base installation and cannot change the bootloader or partition table.
+readll checks the image project, version, size, and headers before writing the inactive firmware slot. It selects the new slot only after full image validation. If the new image resets before its first hardware and UI startup check succeeds, the bootloader returns to the previous slot. Keep power connected and the TF card inserted during installation. An application-only update cannot replace the initial OTA base installation and cannot change the bootloader or partition table.
 
 ## Build from source
 

@@ -14,7 +14,7 @@
       if (!r.ok) throw new Error('manual unavailable');
       return r.json();
     }).then(data => {
-      search = KiikoManualSearch.create(data);
+      search = readllManualSearch.create(data);
       return search;
     }).catch(error => { pending = null; throw error; });
     return pending;

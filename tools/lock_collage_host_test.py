@@ -94,7 +94,7 @@ static unsigned decoded,cover_requests;
 static unsigned plotted,recent_bump;
 static int promoted=-1;
 static const char *fixtures;
-static const char *profile="Kiiko";
+static const char *profile="readll";
 static const char *hidden_path;
 static enum EpdRotation rotation=EPD_ROT_PORTRAIT;
 void *heap_caps_malloc(size_t n,int caps){(void)caps;if(fail_after==0)return NULL;if(fail_after>0)--fail_after;if(n>capacity-live)return NULL;void *p=malloc(n);if(!p)return NULL;for(unsigned i=0;i<8192;++i)if(!allocations[i].p){allocations[i].p=p;allocations[i].size=n;live+=n;if(live>peak)peak=live;return p;}abort();}
@@ -192,7 +192,7 @@ int main(int argc,char **argv){
  assert(book_lock_collage_draw(other)&&!memcmp(fb,other,LOCK_FRAME_BYTES));
  FILE *preview=fopen(argv[3],"wb");assert(preview&&fwrite(fb,1,LOCK_FRAME_BYTES,preview)==LOCK_FRAME_BYTES&&fclose(preview)==0);
  corrupt_frame();assert(book_lock_collage_draw(other));assert(!memcmp(fb,other,LOCK_FRAME_BYTES)&&decoded==15);
- profile="自定义名字";assert(book_lock_collage_draw(other)&&memcmp(fb,other,LOCK_FRAME_BYTES));assert(decoded==15);profile="名字很长名字很长名字很长名字很长名字很长";assert(book_lock_collage_draw(other));profile="Kiiko";
+ profile="自定义名字";assert(book_lock_collage_draw(other)&&memcmp(fb,other,LOCK_FRAME_BYTES));assert(decoded==15);profile="名字很长名字很长名字很长名字很长名字很长";assert(book_lock_collage_draw(other));profile="readll";
  // 损坏封面头不能把无效比例带入几何计算；重解码后重新建立缓存。
  // Invalid cover metadata cannot enter geometry; decode again and rebuild the cache.
  lib=library_load();assert(lib);char cached_cover[112];image_cache_path(&lib->books[0],cached_cover);

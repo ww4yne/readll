@@ -1,18 +1,20 @@
-# kiikoread
+# readll
 
-项目对外名称统一为 **kiikoread**，网页对设备使用「墨水屏」。保留原 GitHub 仓库网址、升级地址与备份文件名；固件界面也统一使用 kiikoread。纯白官网包含界面预览、功能介绍、版本选择、网页刷机、Bin 下载和[在线使用说明](flash/manual.html)。运行 `python3 tools/stage_public_flash.py _site` 生成公开网站，GitHub Pages 或 Cloudflare Pages 均可使用 `_site` 作为发布目录。说明书从 `docs/user-manual.zh-CN.json` 同源生成，运行 `tools/build_user_manual.py --font /path/to/a/static-CJK.ttf` 可更新 HTML 与 PDF（需要 Python ReportLab）。
-正式固件 Bin 统一保存到 [GitHub Releases](https://github.com/wegooo-cell/read-pico-reader/releases)，网站构建按清单下载并校验，不直接发布原始 flash 目录。设备优先读取 `https://kiikoread.com/update.json`，失败后回退原 GitHub 更新源。主站使用 `python3 tools/stage_public_flash.py _site --ota-origin https://kiikoread.com`；GitHub Pages 使用默认参数，保留旧固件可识别的升级地址。
+[在线 WebUSB 刷机](https://wegooo-cell.github.io/readll/#flash-action) ·
+[English](README.md) · [日本語](README.ja-JP.md) ·
+[第三方许可](THIRD_PARTY_NOTICES.md)
 
-
-[English](README.md) · [日本語](README.ja-JP.md) · [第三方许可](THIRD_PARTY_NOTICES.md)
+项目、固件 UI、模拟器、网页、构建 project 和升级包技术标识统一为小写 **readll**。`tools/package_flash.py` 从同一次构建生成完整 USB/WebUSB 资产与 TF Bin；`tools/stage_public_flash.py` 生成可部署到任意 HTTPS 静态站的纯白刷机网站。仅设备内联网 OTA 在新 readll origin 配置前禁用，不访问旧源，也不静默回退。
 
 这是为 **MindReset RDP-G01-W** 墨水屏开发板制作的独立开源阅读固件，基于 [MindReset 官方示例固件](https://github.com/MindReset/read_pico_firmware) 开发，**并非 MindReset 官方发布**。
 
-界面包括首页、书架、文件管理和设置；可阅读 TF 卡中的 EPUB、TXT，保存阅读进度，并通过 WiFi、设备热点或 USB 传输文件。
+界面包括首页、书架、文件管理和设置；RSS 从菜单直接进入每页 12 条的 Miniflux
+未读队列，支持离线正文、已读同步、与 EPUB 共用的排版引擎及三键翻页。固件也可阅读
+TF 卡中的 EPUB、TXT，保存阅读进度，并通过 WiFi、设备热点或 USB 传输文件。
 
 ## 当前正式版：rc92
 
-本次新增多款时钟、月度阅读记录、书架分类与页面记忆，优化跟手滚动、惯性、时钟局刷和头像缓存，阅读字重支持细微调整；合入竖排与翻页器适配更新。票根统一使用系统字体；首页与阅读标题复用各自当前字体，按原生字号清晰显示。在线刷机、TF 升级与联网 OTA 同源发布，设备显示简短日志。rc87 已下架，原发布的 rc85、rc86 仍可选择。详见[更新日志](docs/CHANGELOG.md)。
+本次新增多款时钟、月度阅读记录、书架分类与页面记忆，优化跟手滚动、惯性、时钟局刷和头像缓存，阅读字重支持细微调整；合入竖排与翻页器适配更新。USB 与 TF 包由同一次构建生成；联网 OTA 在新 origin 配置前不可用。详见[更新日志](docs/CHANGELOG.md)。
 
 
 ### 阅读与低功耗更新
@@ -52,7 +54,7 @@ WiFi 和热点传书网页都有「状态栏签名」，保存或清空后写入
 
 ## 文件传输
 
-文件管理直接显示 **WiFi传输、热点传输、USB传输** 三个入口。WiFi 传输连接已保存的网络，未配网时进入网络设置；热点传输直接创建 kiikoread 热点；USB 传输连接电脑读写 TF 卡。WiFi 与热点网页继续支持 TF 卡目录浏览、任意文件上传、书籍/字体/图片导入和状态栏签名设置。
+文件管理直接显示 **WiFi传输、热点传输、USB传输** 三个入口。WiFi 传输连接已保存的网络，未配网时进入网络设置；热点传输直接创建 readll 热点；USB 传输连接电脑读写 TF 卡。WiFi 与热点网页继续支持 TF 卡目录浏览、任意文件上传、书籍/字体/图片导入和状态栏签名设置。
 
 ## 升级和恢复
 
@@ -66,19 +68,23 @@ WiFi 和热点传书网页都有「状态栏签名」，保存或清空后写入
 
 系统设置的“升级和恢复”分组包含系统升级、保存与恢复、BOOT 刷机。文件管理专注文件与传输；蓝牙翻页器可在设置里启用、配对与学习按键。只支持 BLE 设备，WiFi 工作时暂停蓝牙。
 
-官网下载的 `Pico-update.bin` 放在 TF 卡根目录，然后选择“设置 → 升级和恢复 → 系统升级 → TF 卡升级”。rc72 及以后的现有双槽基础包兼容本次 TF 升级；更早版本或其他固件先完整刷机。rc79 新增联网 OTA，官网发布后续清单后可通过 WiFi 检查与升级。
+把本地构建生成的 `readll-update.bin` 放在 TF 卡根目录，然后选择“设置 → 升级和恢复 → 系统升级 → TF 卡升级”。旧项目升级包与 readll 不兼容；首次安装请使用同一次 readll 构建生成的完整 USB 包。
 
 每次发布运行 `python3 tools/package_flash.py build/版本号 flash`，从同一编译输出生成全量包、TF Bin 和 OTA 清单；网页部署前再次核对设备型号、双槽布局、基础包版本与能力、Bin 大小及 SHA256。分区或基础升级能力不符合要求时拒绝发布，需重新生成兼容基础包。
 
 ## 在线网页刷机
 
+公开刷机页：
+[`https://wegooo-cell.github.io/readll/#flash-action`](https://wegooo-cell.github.io/readll/#flash-action)。
+请使用电脑端 Chrome 或 Edge、支持数据传输的 USB 线，并确认设备为 RDP-G01-W。
+
 连接按钮上方可选择最新正式版或原发布的 **rc86 / rc85**，发布时间与 TF 升级 Bin 下载跟随选择。所有版本默认保留设备数据。
 
-打开 [HTTPS 在线刷机页](https://wegooo-cell.github.io/read-pico-reader/)。在电脑端 Chrome 或 Edge 中，用支持数据传输的 USB 线连接 **RDP-G01-W 墨水屏**，选择设备串口并按提示刷入。**刷机前确认型号。**普通刷机保留设备设置、阅读记录和 TF 卡内容；固件不附带书籍或预设的阅读记录。
+先运行 `py -3 tools/package_flash.py build/readll-package-build build/readll-package`，再运行 `py -3 tools/stage_public_flash.py _site --package-dir build/readll-package`。成品大小与 SHA-256 清单固定为 `release-assets.json`；可选的本地发布源映射使用独立 schema 的 `flash/release-sources.json`。生成的 `_site` 使用相对路径，可部署到任意 HTTPS 静态站。在电脑端 Chrome 或 Edge 中，用支持数据传输的 USB 线连接 **RDP-G01-W 墨水屏**，选择设备串口并按提示刷入。
 
 如果运行本固件的设备无法自动进入下载模式，可在设备上点击**设置 → 升级和恢复 → BOOT 刷机**，等电脑重新识别串口后再用网页刷机。
 
-刷机页现有图文新手指南：**连接 kiikoread → 选择串口 → 确认安装并等待完成**。页面下方也介绍了首页、书架、文件管理和设置，以及常见问题。
+刷机页现有图文新手指南：**连接 readll → 选择串口 → 确认安装并等待完成**。页面下方也介绍了首页、书架、文件管理和设置，以及常见问题。
 
 刷机清单为 [`flash/manifest.json`](flash/manifest.json)，写入引导程序、分区表、应用程序和 OTA 数据分区；不会覆盖现有 NVS 设置与内置书籍分区。网页由 [Pages 工作流](.github/workflows/pages.yml) 按明确的文件清单部署，不上传本机书籍、备份或额外字体包。[查看更新日志](docs/CHANGELOG.md)。
 
@@ -88,13 +94,11 @@ WiFi 和热点传书网页都有「状态栏签名」，保存或清空后写入
 
 ## 联网升级
 
-连接 WiFi 后进入**设置 → 升级和恢复 → 系统升级 → 检查更新**。从 rc84 开始，发现新版本时会显示简短更新日志，并提供“稍后 / 开始更新”。旧版固件升级到 rc84 前，可在在线刷机页查看本次日志。
-
-本地修复：联网升级前释放闲置封面缓存，内存不足时停止并提示；屏幕推送和固件擦写串行执行，按下载顺序分段擦除。下载进度约每 5 秒且增长至少 5 个百分点时，仅补画新增黑色段和百分比，不擦除已完成段、不累计整页清屏。离页、锁屏和取消仍等待任务收尾，校验失败保留当前启动槽。
+仅设备内联网 OTA 尚未配置。系统升级页明确显示“在线升级尚未配置”；固件没有更新源 URL、HTTP 请求路径或旧源回退。WebUSB 网页刷机、完整 USB 包与 TF 本地升级不受影响。
 
 ## TF 卡本地升级
 
-启用本地升级时，需要先用电脑完整刷入一次带双分区的 OTA 基础版；这一步会更新引导程序和分区表，但保留原来的设备设置、阅读记录、内部存储地址与 TF 卡内容。之后把对应设备型号的应用镜像命名为 `Pico-update.bin`，放到 TF 卡根目录，进入**设置 → 升级和恢复 → 系统升级 → TF 卡升级**。
+启用本地升级时，需要先用电脑完整刷入一次带双分区的 OTA 基础版；这一步会更新引导程序和分区表，但保留原来的设备设置、阅读记录、内部存储地址与 TF 卡内容。之后把对应设备型号的应用镜像命名为 `readll-update.bin`，放到 TF 卡根目录，进入**设置 → 升级和恢复 → 系统升级 → TF 卡升级**。
 
 设备会先检查固件项目名、版本、文件大小和镜像头，再把升级包写入当前未使用的固件槽。完整性校验通过后才切换启动槽；新版本首次启动如果未通过硬件与界面检查便异常复位，引导程序会自动回到上一槽。安装过程中请保持供电，不要取出 TF 卡。TF 卡升级包只包含应用程序，不能代替首次安装 OTA 基础版，也不能用于更换分区表或引导程序。
 

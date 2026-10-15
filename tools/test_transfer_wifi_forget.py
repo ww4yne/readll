@@ -4,11 +4,12 @@ Exercise the production forget API with existing NVS fault shims and resource gu
 """
 from pathlib import Path
 import re
+import shutil
 import subprocess
 import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
-production = (ROOT / "components/read_pico_transfer/read_pico_transfer.c").read_text()
+production = (ROOT / "components/read_pico_transfer/read_pico_transfer.c").read_text(encoding="utf-8")
 
 
 def function(name):
@@ -25,7 +26,7 @@ def function(name):
 
 # 复用真实凭据读写与已有故障替身，只替换平台边界，不复制遗忘实现。
 # Reuse real credential I/O and existing fault shims; replace platform boundaries, not forget logic.
-harness = (ROOT / "tools/transfer_wifi_host_test.c").read_text()
+harness = (ROOT / "tools/transfer_wifi_host_test.c").read_text(encoding="utf-8")
 harness = harness.replace("int main(void)", "static void policy_test(void)")
 harness = harness.replace('"../components/', '"' + str(ROOT / "components") + '/')
 harness += r'''
@@ -91,10 +92,14 @@ int main(void) {
     puts("transfer WiFi forget: failed-start recovery, persistence faults, busy/upload and resource guards PASS");
 }
 '''
-with tempfile.TemporaryDirectory(prefix="kiikoread-wifi-forget-") as directory:
+if not shutil.which("cc"):
+    print("SKIP: host cc is unavailable")
+    raise SystemExit(0)
+
+with tempfile.TemporaryDirectory(prefix="readll-wifi-forget-") as directory:
     work = Path(directory)
     source = work / "test.c"
-    source.write_text(harness)
+    source.write_text(harness, encoding="utf-8")
     cjson = ROOT / "managed_components/espressif__cjson/cJSON"
     subprocess.run(["cc", "-std=c11", "-Wall", "-Wextra", "-Werror", "-Wno-misleading-indentation",
                     "-Wno-deprecated-declarations",

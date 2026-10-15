@@ -208,7 +208,7 @@ int main(void) {
     app_settings_set_reader_vertical_turn(true);
     assert(app_settings_reader_vertical_turn());
 
-    strlcpy(s_device_name, "Kiiko Pico", sizeof(s_device_name));
+    strlcpy(s_device_name, "readll Pico", sizeof(s_device_name));
     strlcpy(s_status_signature, "今天也要读书", sizeof(s_status_signature));
     strlcpy(s_avatar, "/sdcard/pictures/missing-avatar.jpg", sizeof(s_avatar));
     strlcpy(s_font, "/sdcard/fonts/missing.ttf", sizeof(s_font));
@@ -232,7 +232,7 @@ int main(void) {
     settings_backup_wifi_t saved_network;
     assert(fread(&saved_network, 1, sizeof(saved_network), saved) == sizeof(saved_network));
     assert(fclose(saved) == 0);
-    assert(!strcmp(saved_profile.device_name, "Kiiko Pico") &&
+    assert(!strcmp(saved_profile.device_name, "readll Pico") &&
            !strcmp(saved_profile.status_signature, "今天也要读书") &&
            !strcmp(saved_profile.avatar, "/sdcard/pictures/missing-avatar.jpg"));
     assert(!(saved_profile.home_full_refresh & 64));
@@ -341,7 +341,7 @@ int main(void) {
     assert(s_reader_hold_refresh);
     assert(app_settings_reader_vertical_turn());
 
-    assert(s_home_full_refresh && !strcmp(s_device_name, "Kiiko Pico") &&
+    assert(s_home_full_refresh && !strcmp(s_device_name, "readll Pico") &&
            !strcmp(s_status_signature, "今天也要读书"));
     assert(!s_avatar[0]); /* Missing avatar falls back to the default mark. */
     assert(!s_font[0]); /* Missing external font falls back to built-in. */
@@ -496,7 +496,7 @@ int main(void) {
     assert(fclose(file) == 0);
     assert(app_settings_backup_restore() == ESP_OK && !s_staged_shutdown);
 
-    assert(!s_home_full_refresh && !strcmp(s_device_name, "kiikoread") && !s_status_signature[0]);
+    assert(!s_home_full_refresh && !strcmp(s_device_name, "readll") && !s_status_signature[0]);
     assert(!strcmp(saved_wifi.ssid, "Home_2.4G")); /* Old backups leave network alone. */
 
     /* Existing PICOSET2 backups remain readable, with centered guide lines. */

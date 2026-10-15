@@ -1,6 +1,6 @@
 # 官网图文说明书与检索
 
-官网入口为 `https://kiikoread.com/manual/`，首页和说明书右下角的「问说明书」共用同一份操作索引。原 `manual.html` 与已公开的章节链接仍跳到对应新章节，PDF 地址保持 `manual/kiikoread-manual.pdf`。
+说明书入口为静态站的 `manual/`，首页和说明书右下角的「问说明书」共用同一份操作索引。`manual.html` 跳到对应章节，PDF 地址为 `manual/readll-manual.pdf`。WebUSB 刷机站使用相对路径，可部署到任意 HTTPS 静态 origin；这与设备内联网 OTA origin 独立。
 
 ## 内容与生成
 
@@ -17,7 +17,7 @@ python3 tools/build_detailed_manual.py --assets flash/manual/assets --output fla
 node tools/manual_search_test.js
 ```
 
-新增操作必须有唯一且稳定的 `id`，不能破坏已分享的定位链接；更新相应原生图解后再替换图片。PDF 使用生成工具的 `--pdf --font <中文字体>` 选项另行生成，确认页面与字形后复制到固定公开 PDF 地址。网站打包仍走 `tools/stage_public_flash.py`；它核对说明书本地资源，同时保持原固件清单、Release 来源、SHA-256 与 OTA 兼容检查。
+新增操作必须有唯一且稳定的 `id`，不能破坏已分享的定位链接；更新相应原生图解后再替换图片。PDF 使用生成工具的 `--pdf --font <中文字体>` 选项另行生成，确认页面与字形后复制到固定公开 PDF 地址。网站打包仍走 `tools/stage_public_flash.py --package-dir <readll package>`；它核对说明书本地资源、WebUSB manifest、USB 分区部件、TF Bin 与 `release-assets.json` 中的 SHA-256。可选历史发布源映射单独使用 `flash/release-sources.json`，不得与成品哈希清单混用。设备内联网 OTA 禁用状态单独校验，不影响网页刷机。
 
 ## 检索行为
 

@@ -50,8 +50,8 @@ static int clean_calls;
 // 所有真实推屏和欠载恢复都必须持有 OTA 互斥锁，包括递归兜底。
 // Every physical scan and underrun recovery must hold OTA exclusion, including recursive fallback.
 static unsigned ota_display_depth;
-bool pico_online_display_begin(void) { ++ota_display_depth; return true; }
-void pico_online_display_end(bool held) { assert(held && ota_display_depth); --ota_display_depth; }
+bool readll_online_display_begin(void) { ++ota_display_depth; return true; }
+void readll_online_display_end(bool held) { assert(held && ota_display_depth); --ota_display_depth; }
 void e0470_page_turn_release(void) {}
 
 void* heap_caps_aligned_alloc(size_t alignment, size_t bytes, unsigned caps) {
@@ -385,7 +385,7 @@ int main(void) {
     // Explicit full, image, from-white and lock-related outputs retain their whole targets; cancel never replays a deferred frame.
     for (int view = 0; view < 4; ++view) {
         reset(); target(0); begin(&owner_a); target(6);
-        if (view == 2) {bool held=pico_online_display_begin();epd_clear();pico_online_display_end(held);} // from-white 需要物理白底。/ From-white requires a physically white baseline.
+        if (view == 2) {bool held=readll_online_display_begin();epd_clear();readll_online_display_end(held);} // from-white 需要物理白底。/ From-white requires a physically white baseline.
         enum EpdDrawError result = view == 0 ? update_display_full(&hl)
             : view == 1 ? update_display_image_gray(&hl)
             : view == 2 ? update_display_from_white_with(&hl, &E0470_WAVEFORM, MODE_GL16)

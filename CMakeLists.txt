@@ -8,12 +8,12 @@ idf_build_set_property(MINIMAL_BUILD ON)
 
 # 本地测试沿用当前正式版号；仅正式发布或明确的 OTA 验证指定新版本。
 # Local tests keep the current release version; override only for publication or explicit OTA validation.
-if(DEFINED ENV{PICO_PROJECT_VER} AND NOT "$ENV{PICO_PROJECT_VER}" STREQUAL "")
-    set(PROJECT_VER "$ENV{PICO_PROJECT_VER}")
+if(DEFINED ENV{READLL_PROJECT_VER} AND NOT "$ENV{READLL_PROJECT_VER}" STREQUAL "")
+    set(PROJECT_VER "$ENV{READLL_PROJECT_VER}")
 else()
     set(PROJECT_VER "0.3.3-rc92")
 endif()
-project(Read_Pico)
+project(readll)
 
 # 固件描述时间统一为 UTC，与概览页标识一致；保留已有编译缓存启动器。
 # Compile app-description timestamps in UTC to match Overview; preserve any compiler-cache launcher.

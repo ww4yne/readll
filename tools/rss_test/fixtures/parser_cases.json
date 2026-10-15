@@ -1,0 +1,7 @@
+[
+  {"file":"me_unknown.json","parser":"rss_json_parse_user","expect":"RSS_JSON_OK"},
+  {"file":"categories_unknown.json","parser":"rss_json_parse_categories","expect":"RSS_JSON_OK"},
+  {"file":"entries_unknown.json","parser":"rss_json_parse_entries","expect":"RSS_JSON_OK"},
+  {"file":"entries_truncated.json","parser":"rss_json_parse_entries","expect":"RSS_JSON_TRUNCATED"},
+  {"file":"generated_entries_oversized.json","parser":"rss_json_parse_entries","expect":"RSS_JSON_TOO_LARGE","generated":true}
+]

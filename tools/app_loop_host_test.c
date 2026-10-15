@@ -478,7 +478,7 @@ int main(void) {
 /* 中文：硬件 BLE 与联网任务替身。/ English: Hardware BLE and online worker shims. */
 void ble_pt_sync(bool enabled) { (void)enabled; }
 void ble_pt_poll(void) {}
-bool pico_online_busy(void) { return online_busy; }
+bool readll_online_busy(void) { return online_busy; }
 
 uint8_t app_settings_auto_lock_minutes(void){return idle_minutes;}
 uint32_t ble_pt_input_serial(void){return 0;}

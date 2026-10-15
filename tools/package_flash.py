@@ -1,19 +1,17 @@
 #!/usr/bin/env python3
-"""中文：从同一次编译生成基础包、TF 升级包与 OTA 清单。/ English: Stage base, TF and OTA from one build."""
+"""中文：从同一次编译生成 WebUSB/USB 与 TF 资产，并写出禁用的设备联网 OTA 状态。/ English: Stage WebUSB/USB and TF assets plus an explicitly disabled device-OTA status."""
 from pathlib import Path
-from datetime import datetime
-from zoneinfo import ZoneInfo
+from datetime import datetime, timedelta, timezone
 import hashlib, json, shutil, sys
 from verify_flash_bundle import check
 ROOT=Path(__file__).resolve().parents[1]
 def package(build: Path, output: Path):
-    config=(build/'config/sdkconfig.h').read_text()
+    config=(build/'config/sdkconfig.h').read_text(encoding='utf-8')
     assert '#define CONFIG_BOOTLOADER_APP_ROLLBACK_ENABLE 1' in config, 'rollback bootloader required'
-    data=(build/'Read_Pico.bin').read_bytes()
+    data=(build/'readll.bin').read_bytes()
     assert data[0]==0xe9 and int.from_bytes(data[32:36],'little')==0xabcd5432
     version=data[48:80].split(b'\0')[0].decode('ascii')
-    assert b'PICO_HTTPS_OTA_V1' in data, 'base package lacks online OTA support'
-    upgrade_name=f'Pico-update-{version}.bin'
+    upgrade_name=f'readll-update-{version}.bin'
     # 本地同版本测试只能打到构建目录，已发布文件的下载内容必须固定。
     # Same-version local tests belong in build directories; published downloads stay immutable.
     published=ROOT/'flash'/upgrade_name
@@ -21,23 +19,29 @@ def package(build: Path, output: Path):
         assert published.read_bytes()==data, (
             'published version already exists with different bytes; '
             'stage local tests in build/, or increment the version for an authorized release')
-    manifest=json.loads((ROOT/'flash/manifest.json').read_text())
+    manifest=json.loads((ROOT/'flash/manifest.json').read_text(encoding='utf-8'))
     manifest['version']=version
-    manifest['name']='kiikoread'
-    manifest['updated_at']=datetime.now(ZoneInfo('Asia/Shanghai')).isoformat(timespec='seconds')
-    manifest['pico_ota']={'layout':'pico-dual-4m-v1','base_version':version,
-        'minimum_base_version':'0.3.3-rc72','online_ota_base_version':'0.3.3-rc79','rollback':True}
+    manifest['name']='readll'
+    manifest['updated_at']=datetime.now(timezone(timedelta(hours=8))).isoformat(timespec='seconds')
+    manifest['readll_delivery']={'webusb_enabled':True,'tf_enabled':True}
+    manifest['readll_ota']={'layout':'readll-dual-4m-v1','base_version':version,
+        'rollback':True,'online_enabled':False}
     output.mkdir(parents=True,exist_ok=True)
-    parts={'firmware.bin':build/'Read_Pico.bin','bootloader.bin':build/'bootloader/bootloader.bin',
+    parts={'firmware.bin':build/'readll.bin','bootloader.bin':build/'bootloader/bootloader.bin',
            'partitions.bin':build/'partition_table/partition-table.bin','ota_data_initial.bin':build/'ota_data_initial.bin'}
     for name,path in parts.items():shutil.copy2(path,output/name)
-    shutil.copy2(build/'Read_Pico.bin',output/upgrade_name)
-    shutil.copy2(build/'Read_Pico.bin',output/'Pico-update.bin')
-    release={'schema':1,'version':version,'project':'Read_Pico','board':'RDP-G01-W','layout':'pico-dual-4m-v1',
-        'minimum_base_version':'0.3.3-rc72','url':f'https://wegooo-cell.github.io/read-pico-reader/{upgrade_name}',
-        'size':len(data),'sha256':hashlib.sha256(data).hexdigest(),
-        'notes':'1. 新增时钟与阅读记录组件\n2. 书架分类及翻页位置记忆\n3. 设置跟手滚动与惯性优化\n4. 字重微调及自动全刷墨色修复\n5. 翻页器适配与竖排阅读\n6. 时钟局刷、头像缓存及界面优化'}
-    (output/'manifest.json').write_text(json.dumps(manifest,ensure_ascii=False,indent=2)+'\n')
-    (output/'update.json').write_text(json.dumps(release,ensure_ascii=False,indent=2)+'\n')
-    check(output)
+    shutil.copy2(build/'readll.bin',output/upgrade_name)
+    shutil.copy2(build/'readll.bin',output/'readll-update.bin')
+    release={'schema':1,'enabled':False,'project':'readll','version':version,
+        'message':'在线升级尚未配置'}
+    (output/'manifest.json').write_text(json.dumps(manifest,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+    (output/'update.json').write_text(json.dumps(release,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+    asset_names=tuple(parts)+('readll-update.bin',upgrade_name)
+    assets={'schema':'readll.release-assets.v1','project':'readll','version':version,'files':{
+        name:{'size':(output/name).stat().st_size,'sha256':hashlib.sha256((output/name).read_bytes()).hexdigest()}
+        for name in asset_names}}
+    (output/'release-assets.json').write_text(json.dumps(assets,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+    checksums=''.join(f"{assets['files'][name]['sha256']}  {name}\n" for name in sorted(asset_names))
+    (output/'SHA256SUMS.txt').write_text(checksums,encoding='ascii')
+    check(output, require_site=False)
 if __name__=='__main__':package(Path(sys.argv[1]),Path(sys.argv[2]) if len(sys.argv)>2 else ROOT/'flash')

@@ -16,8 +16,10 @@
 #include "esp_err.h"
 #include "read_pico_transfer_network.h"
 
-#define READ_PICO_TRANSFER_PASSWORD "kiikoread"
+#define READ_PICO_TRANSFER_PASSWORD "readll"
 #define READ_PICO_TRANSFER_URL "http://192.168.4.1"
+#define READ_PICO_MINIFLUX_BASE_URL_MAX 255
+#define READ_PICO_MINIFLUX_TOKEN_MAX 255
 
 typedef enum {
     READ_PICO_TRANSFER_MODE_AP = 0, ///< 设备热点 / Device hotspot
@@ -109,3 +111,11 @@ esp_err_t read_pico_transfer_save_wifi(const char *ssid, const char *password);
 esp_err_t read_pico_transfer_sync_time(uint32_t *utc_seconds);
 /// 已连接 STA 时对时，不断开 WiFi；供 HTTPS 页面校验证书。/ Sync time on connected STA without disconnecting WiFi for HTTPS certificate checks.
 esp_err_t read_pico_transfer_sync_time_online(uint32_t *utc_seconds);
+/// 覆盖保存完整 Miniflux 配置；URL 会规范化，正式配置只接受 HTTPS。/ Overwrite the complete Miniflux configuration; the URL is normalized and production configuration accepts HTTPS only.
+esp_err_t read_pico_transfer_miniflux_set(const char *base_url, const char *api_token);
+/// 清除 Miniflux URL 与 token。/ Clear the Miniflux URL and token.
+esp_err_t read_pico_transfer_miniflux_clear(void);
+/// 将凭据复制到调用方缓冲；未配置返回 ESP_ERR_NOT_FOUND，调用方使用后必须清零 token。
+/// Copy credentials into caller buffers; unconfigured returns ESP_ERR_NOT_FOUND and callers must erase the token after use.
+esp_err_t read_pico_transfer_miniflux_get(char *base_url, size_t base_cap,
+                                         char *api_token, size_t token_cap);

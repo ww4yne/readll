@@ -104,7 +104,7 @@ static void test_directory_upload(void) {
     r = upload_directory_file(root, "books", 9, 100, false, buf, sizeof(buf), receive, NULL, NULL, NULL);
     assert(r.status == 400 && !r.changed);
     // 无扩展名、点开头及零字节文件都可以上传。/ Extensionless, dot-prefixed and empty files are accepted.
-    for (const char **p = (const char *[]){"README", ".env", "Pico-update.bin", NULL}; *p; ++p) {
+    for (const char **p = (const char *[]){"README", ".env", "readll-update.bin", NULL}; *p; ++p) {
         r = upload_directory_file(root, *p, 0, 0, false, buf, sizeof(buf), receive, NULL, NULL, change_callback);
         assert(r.status == 200 && r.changed && !cleanup_calls);
         snprintf(target, sizeof(target), "%s/%s", root, *p);

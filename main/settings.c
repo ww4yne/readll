@@ -90,7 +90,7 @@ static bool s_home_full_refresh;
 static app_home_component_t s_home_component = APP_HOME_FOLDER;
 static uint8_t s_home_goal_minutes = 30;
 static app_main_refresh_mode_t s_main_refresh;
-static char s_device_name[64] = "kiikoread";
+static char s_device_name[64] = "readll";
 static char s_avatar[288];
 static char s_status_signature[96];
 static char s_font[FONT_PATH_MAX];
@@ -210,9 +210,9 @@ void app_settings_init(void) {
     if (nvs_get_u8(h, NVS_KEY_AUTO_LOCK, &raw) == ESP_OK && (raw == 1 || raw == 5 || raw == 10)) s_auto_lock_minutes = raw;
     size_t value_len = sizeof(s_device_name);
     if (nvs_get_str(h, NVS_KEY_DEVICE_NAME, s_device_name, &value_len) != ESP_OK || !s_device_name[0])
-        strlcpy(s_device_name, "kiikoread", sizeof(s_device_name));
+        strlcpy(s_device_name, "readll", sizeof(s_device_name));
     // 仅迁移旧默认名字，保留用户填写的姓名。/ Migrate only the old default, preserving custom names.
-    if (!strcmp(s_device_name, "Pico")) strlcpy(s_device_name, "kiikoread", sizeof(s_device_name));
+    if (!strcmp(s_device_name, "Pico")) strlcpy(s_device_name, "readll", sizeof(s_device_name));
     value_len = sizeof(s_avatar);
     if (nvs_get_str(h, NVS_KEY_AVATAR, s_avatar, &value_len) != ESP_OK ||
         (s_avatar[0] && strncmp(s_avatar, "/sdcard/", 8))) s_avatar[0] = 0;
@@ -1134,7 +1134,7 @@ esp_err_t app_settings_backup_restore(void) {
     uint8_t indent = 2, rule_offset = 4, staged_shutdown = 0;
     settings_backup_indent_adjust_t adjust = {.encoded = 20};
     settings_backup_weight_t weight = {.encoded = 2};
-    settings_backup_profile_t profile = {.device_name = "kiikoread"};
+    settings_backup_profile_t profile = {.device_name = "readll"};
     settings_backup_keys_t keys = {.actions = {APP_READER_KEY_PREV, APP_READER_KEY_TOOLS, APP_READER_KEY_NEXT}};
     settings_backup_wifi_t wifi = {0};
     bool has_wifi = false;
