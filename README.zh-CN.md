@@ -1,6 +1,6 @@
 # readll
 
-[在线 WebUSB 刷机](https://wegooo-cell.github.io/readll/#flash-action) ·
+[在线 WebUSB 刷机](https://ww4yne.github.io/readll/#flash-action) ·
 [English](README.md) · [日本語](README.ja-JP.md) ·
 [第三方许可](THIRD_PARTY_NOTICES.md)
 
@@ -75,7 +75,7 @@ WiFi 和热点传书网页都有「状态栏签名」，保存或清空后写入
 ## 在线网页刷机
 
 公开刷机页：
-[`https://wegooo-cell.github.io/readll/#flash-action`](https://wegooo-cell.github.io/readll/#flash-action)。
+[`https://ww4yne.github.io/readll/#flash-action`](https://ww4yne.github.io/readll/#flash-action)。
 请使用电脑端 Chrome 或 Edge、支持数据传输的 USB 线，并确认设备为 RDP-G01-W。
 
 连接按钮上方可选择最新正式版或原发布的 **rc86 / rc85**，发布时间与 TF 升级 Bin 下载跟随选择。所有版本默认保留设备数据。

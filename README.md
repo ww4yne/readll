@@ -1,6 +1,6 @@
 # readll
 
-[Online WebUSB flasher](https://wegooo-cell.github.io/readll/#flash-action) ·
+[Online WebUSB flasher](https://ww4yne.github.io/readll/#flash-action) ·
 [中文说明](README.zh-CN.md) · [日本語](README.ja-JP.md) ·
 [Third-party notices](THIRD_PARTY_NOTICES.md)
 
@@ -71,7 +71,7 @@ Rename, profile name, status signature, shelf search and WiFi password fields sh
 ## WebUSB/USB installation
 
 The published WebUSB page is
-[`https://wegooo-cell.github.io/readll/#flash-action`](https://wegooo-cell.github.io/readll/#flash-action).
+[`https://ww4yne.github.io/readll/#flash-action`](https://ww4yne.github.io/readll/#flash-action).
 It requires desktop Chrome or Edge, HTTPS, a USB data cable, and the
 RDP-G01-W device.
 
