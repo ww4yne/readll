@@ -11,7 +11,7 @@ idf_build_set_property(MINIMAL_BUILD ON)
 if(DEFINED ENV{READLL_PROJECT_VER} AND NOT "$ENV{READLL_PROJECT_VER}" STREQUAL "")
     set(PROJECT_VER "$ENV{READLL_PROJECT_VER}")
 else()
-    set(PROJECT_VER "0.3.3-rc97")
+    set(PROJECT_VER "0.3.3-rc98")
 endif()
 project(readll)
 

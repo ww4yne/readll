@@ -48,7 +48,11 @@ Website browser regression (Python Playwright with Chromium required):
 It covers responsive layouts, keyboard previews, upstream links, inline notices and installer
 availability/error states without connecting to a device.
 
-## Current build: rc97
+## Current build: rc98
+
+The file-page **WiFi online (WiFi联机)** entry and its service page now describe
+both file uploads and RSS configuration. The RSS tab uses the standard Lucide
+dot-and-arcs RSS icon, not a book.
 
 RSS is a first-class bottom tab, not a Settings item. Home adds a tappable RSS
 card with cached unread and pending-operation counts plus configuration/sync status.
@@ -182,7 +186,7 @@ Please report firmware bugs in this repository, not in the MindReset upstream is
 
 ## File transfer
 
-File management shows **WiFi transfer**, **Hotspot transfer** and **USB transfer** directly. WiFi connects to a saved network or opens network setup; hotspot mode starts the device access point; USB exposes the TF card to the computer. AP/STA browser transfer keeps directory browsing, arbitrary-file uploads and status-signature editing.
+File management shows **WiFi online (WiFi联机)**, **Hotspot transfer** and **USB transfer** directly. WiFi connects to a saved network or opens network setup; open the displayed device URL to upload files or configure RSS. Hotspot mode starts the device access point; USB exposes the TF card to the computer. AP/STA browser access keeps directory browsing, arbitrary-file uploads and status-signature editing.
 
 Shake-to-turn is off by default and enabled in reader Font Settings. A horizontal left/right impulse turns to the previous/next page. Slow tilts, other axes, touch and rebounds are filtered; wait through an 800 ms cooldown and rest before the next gesture. Direction and sensitivity still need device validation. The global refresh test option is removed and ignored in older configurations.
 

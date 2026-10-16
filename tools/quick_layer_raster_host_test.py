@@ -125,7 +125,7 @@ int main(void){
  assert(ui_click_feedback_press(frame,85,1188,&r));ui_click_feedback_begin(frame);assert(!live&&!ui_click_feedback_release(frame,&r));
  // 三种主页模式的底栏共用灰底：按压不能改外沿、文字、横条或相邻图标。
  // All three main modes share a gray footer: presses must preserve its perimeter, labels, marker and neighboring icons.
- static const ui_icon_t tabs[]={UI_ICON_HOUSE,UI_ICON_LIBRARY_BIG,UI_ICON_BOOK_OPEN,UI_ICON_FOLDER_OPEN,UI_ICON_SLIDERS_HORIZONTAL};
+ static const ui_icon_t tabs[]={UI_ICON_HOUSE,UI_ICON_LIBRARY_BIG,UI_ICON_RSS,UI_ICON_FOLDER_OPEN,UI_ICON_SLIDERS_HORIZONTAL};
  for(int tab=0;tab<5;++tab)for(int policy=0;policy<3;++policy)for(int edge=0;edge<2;++edge){
   fast=policy==1;memset(frame,0xee,BYTES);
   int cx=(tab*2+1)*684/10;

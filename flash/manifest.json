@@ -1,6 +1,6 @@
 {
   "name": "readll",
-  "version": "0.3.3-rc97",
+  "version": "0.3.3-rc98",
   "new_install_prompt_erase": true,
   "readll_delivery": {
     "webusb_enabled": true,

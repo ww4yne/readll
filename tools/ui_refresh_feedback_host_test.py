@@ -431,7 +431,9 @@ typedef struct {int x,y,width,height;} EpdRect;
 #define EPD_DRAW_ALIGN_CENTER 1
 #define UI_NAV_TAB_ICON_PX 44
 enum {UI_CLICK_NAV};
-static void ui_click_feedback_register(uint8_t *fb,EpdRect r,int kind,ui_icon_t icon){(void)fb;(void)icon;assert(kind==UI_CLICK_NAV&&r.width==60&&r.height==60);}
+static ui_icon_t registered_icons[5];
+static int registered;
+static void ui_click_feedback_register(uint8_t *fb,EpdRect r,int kind,ui_icon_t icon){(void)fb;assert(kind==UI_CLICK_NAV&&r.width==60&&r.height==60&&registered<5);registered_icons[registered++]=icon;}
 static const char *const labels[]={"首页","书架","RSS","文件","设置"};
 typedef struct {int index;} app_desc_t;
 typedef struct {const app_desc_t *request_app;} app_ctx_t;
@@ -472,8 +474,9 @@ int main(void){
  for(main_choice=0;main_choice<3;++main_choice)for(int slot=0;slot<5;++slot){
    int active=expected[slot];
    app_ctx_t ctx={0};ui_nav_request(&ctx,active);assert(ctx.request_app==&apps[active]);
-   first_ink=2000;markers=tracks=texts=guards=0;ui_nav_draw(&fb,active);
+   first_ink=2000;markers=tracks=texts=guards=registered=0;ui_nav_draw(&fb,active);
    assert(markers==1&&texts==5&&tracks==(main_choice!=0)&&guards==1);
+   assert(registered==5&&registered_icons[2]==UI_ICON_RSS);
    assert(marker_x==(slot*2+1)*684/10-28);
    // 验证真实图标掩模的第一笔，单次刷新32列对齐后不能触碰图标。
    // Check actual mask ink: the 32-column-expanded single update must not reach an icon.
@@ -483,7 +486,7 @@ int main(void){
  app_ctx_t ctx={0};
  ui_nav_request(&ctx,4);assert(!ctx.request_app);
  ui_nav_request(&ctx,6);assert(!ctx.request_app);
- markers=0;ui_nav_draw(&fb,4);assert(!markers);
+ markers=registered=0;ui_nav_draw(&fb,4);assert(!markers);
  puts("PASS: aligned content refresh stops above marker and actual navigation masks; blank guard and production layout retained");
 }
 '''

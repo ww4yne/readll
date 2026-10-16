@@ -199,6 +199,13 @@ int main(void){
 assert "rss_overview_load(&s_rss_overview)" in function("on_enter", home)
 assert "render_rss_overview(fb)" in function("render_root", home)
 assert "hit(rss_card_rect(),x,y)" in function("on_gesture", home)
+files = ROOT / "main/apps/app_files.c"
+transfer = ROOT / "main/apps/app_transfer.c"
+assert '"WiFi联机"' in function("render", files)
+assert '"WiFi联机"' in function("draw_methods", transfer)
+assert '"WiFi联机"' in function("render", transfer)
+assert "扫码打开设备网页：传书、RSS 配置" in function("render", transfer)
+assert not re.search(r'"WiFi\s*(?:传输|传书)', files.read_text() + transfer.read_text())
 with tempfile.TemporaryDirectory(dir=ROOT / "build") as directory:
     c, binary = Path(directory) / "test.c", Path(directory) / "test"
     c.write_text(unit)

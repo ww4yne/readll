@@ -3,6 +3,13 @@
 按版本简述对用户可见的变化；使用方法见 [README](../README.zh-CN.md)。
 User-visible changes by release; see [README](../README.md) for usage.
 
+## 0.3.3-rc98
+
+- 「WiFi传输」更名为「WiFi联机」，同步更新入口、题头与状态提示，明确设备网页可传书和配置 RSS；不改变网络或传输行为。
+  Rename WiFi transfer to WiFi online across entry, title and status text, exposing uploads and RSS setup through the device webpage without changing networking or transfer behavior.
+- RSS 底栏替换为标准 Lucide RSS 圆点双弧线图标，正常与按压反馈共用同一掩模。
+  Replace the RSS book icon with the standard Lucide RSS dot-and-arcs artwork, sharing its mask for normal and pressed feedback.
+
 ## 0.3.3-rc97
 
 - RSS 独立置于底栏：首页 / 书架 / RSS / 文件 / 设置；移除设置中的阅读入口，正文与排版设置保留原三键操作。

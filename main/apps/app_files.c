@@ -606,7 +606,7 @@ static void render(app_ctx_t *ctx, uint8_t *fb) {
             if (capacity.width > 0) ui_fill_round_rect(fb, capacity, 3, 0x68);
         }
         ui_text(fb, 42, 308, 21, "传输文件", EPD_DRAW_ALIGN_LEFT, false);
-        static const char *const methods[] = {"WiFi传输", "热点传输", "USB传输"};
+        static const char *const methods[] = {"WiFi联机", "热点传输", "USB传输"};
         static const char *const details[] = {"同一网络", "连接设备热点", "连接电脑"};
         for (int i = 0; i < 3; ++i) {
             EpdRect card = home_transfer_rect(i);

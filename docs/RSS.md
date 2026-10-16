@@ -44,12 +44,14 @@ this boot only; cold boot reports a local list rather than claiming recent succe
 Home loads its snapshot once on entry. Painting and idle clock updates do not read
 the cache, connect, fetch bodies or persist them.
 
-在设备传书网页的 RSS 区域填写 Miniflux 地址和 API Key。地址必须使用 HTTPS；保存前会调用
-`/v1/me` 验证。已有 Token 不会从设备回显，只能覆盖或清除。
+配置入口：**文件 → WiFi联机 → 打开屏幕显示的设备网址 → RSS · Miniflux**，不是 readll 官网。
+填写 Miniflux 的 HTTPS 地址和 API token，点击「保存配置」，再点「测试连接」通过 `/v1/me` 验证。
+已有 Token 不会从设备回显，只能覆盖或清除。
 
-Enter the Miniflux URL and API key in the RSS section of the transfer web
-page. The URL must use HTTPS and `/v1/me` is checked before saving. An existing
-token is never returned by the device; it can only be replaced or cleared.
+Open **Files → WiFi online (WiFi联机) → the device URL shown on screen → RSS ·
+Miniflux**, not the readll website. Enter the HTTPS URL and API token, choose
+Save configuration, then Test connection to validate `/v1/me`. An existing token
+is never returned by the device; it can only be replaced or cleared.
 
 API token 必须是 1 至 255 字节的非空白 ASCII；网页、HTTP API、NVS 与 RSS 核心使用同一边界。
 

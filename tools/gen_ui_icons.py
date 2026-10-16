@@ -82,6 +82,7 @@ ICONS = (
     "cpu",               # BOOT 刷机 / boot flashing
     "book-open",         # 阅读设置 / reading settings
     "timer",             # 自动休眠 / idle lock
+    "rss",               # 底栏·RSS 订阅 / nav RSS subscriptions
 )
 
 _NUMBER = re.compile(r"[-+]?(?:\d*\.\d+|\d+\.?)(?:[eE][-+]?\d+)?")
