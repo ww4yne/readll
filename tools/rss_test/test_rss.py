@@ -313,6 +313,8 @@ class StaticAndFixtureContractTests(unittest.TestCase):
         self.assertIn('<span class="masthead-note">READ ALL</span>', web)
         self.assertNotIn("ALL ABOUT READING", web.upper())
         self.assertNotIn("means", web)
+        self.assertNotIn("正文不落盘", web)
+        self.assertNotIn("本次阅读内存", web)
         self.assertIn('<details class="license-notes" id="notices">', web)
         for link in links:
             parsed = urllib.parse.urlparse(link)

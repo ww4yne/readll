@@ -43,6 +43,8 @@ def check(site: Path, screenshots: Path | None) -> None:
             assert page.locator(".closing-line p").inner_text() == "READ ALL"
             assert "means" not in page.locator(".manifesto").inner_text()
             assert "ALL ABOUT READING" not in page.locator("body").inner_text().upper()
+            assert "正文不落盘" not in page.locator("body").inner_text()
+            assert "本次阅读内存" not in page.locator("body").inner_text()
             assert page.locator("#firmware-version").inner_text().startswith("0.")
             assert page.locator("#bin-download").get_attribute("download") == "readll-update.bin"
             assert page.locator("#flash-installer").get_attribute("manifest").endswith("/manifest.json")
