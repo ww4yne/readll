@@ -22,8 +22,8 @@ The project, firmware UI, simulator, website, build project and package names us
 
 An independent, open-source reading firmware for the **MindReset RDP-G01-W** ESP32-S3 e-paper board. It is based on [MindReset's official demo firmware](https://github.com/MindReset/read_pico_firmware), but is **not an official MindReset release**.
 
-The four main tabs remain Home, Bookshelf, Files, and Settings. RSS opens from
-**Settings → RSS 阅读** directly into a 12-row Miniflux unread queue, with offline title-list
+The five main tabs are **Home, Bookshelf, RSS, Files, and Settings**. RSS opens
+directly into a 12-row Miniflux unread queue, with offline title-list
 review, synchronized read state, EPUB-shared typography, and hardware-key
 pagination. The firmware also reads
 EPUB and TXT books from a TF card, remembers reading progress, and supports
@@ -48,10 +48,11 @@ Website browser regression (Python Playwright with Chromium required):
 It covers responsive layouts, keyboard previews, upstream links, inline notices and installer
 availability/error states without connecting to a device.
 
-## Current build: rc96
+## Current build: rc97
 
-Fix the missing RSS entry: **Settings → RSS 阅读** is visible below Date & time
-on the first settings screen. Existing main tabs and upstream rc95 behavior remain unchanged.
+RSS is a first-class bottom tab, not a Settings item. Home adds a tappable RSS
+card with cached unread and pending-operation counts plus configuration/sync status.
+It reads only local metadata on entry; it never connects or fetches article bodies.
 
 Firmware behavior follows kiikoread through rc95: asynchronous covers and avatars, row-bounded reading prefetch, corrected return origins, unified time restoration and synchronization, vertical typography fixes, original GC16 full refresh and post-refresh pixel release. Settings lists use one discrete step per gesture, without inertia. The bottom-edge Tools gesture frees all reader key mappings. readll maintains RSS, its identity and website, and its disabled device-side online OTA boundary. USB and TF packages come from one build. See the [changelog](docs/CHANGELOG.md).
 

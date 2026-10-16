@@ -10,6 +10,7 @@
 
 #define PICO_BOOT_PATH_MAX 288
 typedef struct {
+    /// tab 使用稳定的页面注册表编号，不是底栏视觉栏位。/ tab stores a stable app-registry index, not a visual slot.
     uint8_t tab, reader, fullscreen;
     char path[PICO_BOOT_PATH_MAX];
 } pico_resume_t;

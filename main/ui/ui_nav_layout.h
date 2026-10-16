@@ -3,6 +3,21 @@
  * English: Lightweight navigation bounds shared by painting and presentation to protect fixed icons.
  */
 #pragma once
+#include <stdbool.h>
+
+#define UI_NAV_TAB_COUNT 5
+#define UI_NAV_RSS_APP_INDEX 5
+
+// 注册表编号兼容已保存的恢复记录；底栏顺序独立于注册表。/ Preserve persisted registry indices independently of visual order.
+static inline int ui_nav_app_index(int slot) {
+    const int indices[UI_NAV_TAB_COUNT] = {0, 1, UI_NAV_RSS_APP_INDEX, 2, 3};
+    return slot >= 0 && slot < UI_NAV_TAB_COUNT ? indices[slot] : -1;
+}
+
+static inline bool ui_nav_is_main(int index) {
+    return (index >= 0 && index < 4) || index == UI_NAV_RSS_APP_INDEX;
+}
+
 #define UI_NAV_TOP 1096
 // 只扩大触控热区，不移动图标或改变内容/底栏的刷新边界。
 // Expand touch admission only; icons and content/navigation refresh boundaries stay fixed.

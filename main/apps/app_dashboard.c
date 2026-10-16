@@ -24,6 +24,8 @@
  * User revision: Kehai seconds hold unchanged face pixels to avoid rectangular gray-background flashes; fast mode drives binary dot differences only.
  * 用户修订：首页题头与书架、文件和设置共用左侧起点、顶边及52px名义字号，仍使用当前系统字体。
  * User revision: Home's title matches the shelf/files/settings left edge, top and nominal 52px size in the active system face.
+ * 用户修订：首页展示可直达 RSS 的本地未读和同步信息；进入时读取快照，绘制不访问存储或网络。
+ * User revision: Home adds a local unread/sync card opening RSS; load its snapshot on entry, never during painting or over the network.
  */
 #include <dirent.h>
 #include <stdio.h>
@@ -64,6 +66,26 @@
 #include "ui_gesture.h"
 #include "ui_kit.h"
 #include "ui_nav.h"
+#include "rss_overview.h"
+
+static rss_overview_t s_rss_overview;
+static EpdRect rss_card_rect(void) { return (EpdRect){36,1012,612,64}; }
+
+static void render_rss_overview(uint8_t *fb) {
+    char counts[64], status[96];
+    if(s_rss_overview.counts_known) {
+        snprintf(counts,sizeof(counts),"RSS · 缓存未读 %u",(unsigned)s_rss_overview.unread);
+        snprintf(status,sizeof(status),"待同步 %u · %s",(unsigned)s_rss_overview.pending,s_rss_overview.status);
+    } else {
+        snprintf(counts,sizeof(counts),"RSS · 缓存未读 --");
+        snprintf(status,sizeof(status),"%s",s_rss_overview.status);
+    }
+    (void)ui_text_title_fit(status,18,560,status);
+    ui_draw_round_rect(fb,rss_card_rect(),12,0x60);
+    ui_text_fixed_vc(fb,52,1030,22,counts,EPD_DRAW_ALIGN_LEFT,false);
+    ui_text_fixed_vc(fb,632,1030,20,"打开 ›",EPD_DRAW_ALIGN_RIGHT,false);
+    ui_text_fixed_vc(fb,52,1058,18,status,EPD_DRAW_ALIGN_LEFT,false);
+}
 
 typedef struct {
     char path[BOOK_STORE_PATH_MAX];
@@ -616,6 +638,7 @@ static void render_root(uint8_t *fb) {
     } else label(fb,496,754,22,"请先设置日期与时间",EPD_DRAW_ALIGN_CENTER,0x60);
     label(fb,642,985,22,"· 已闭环",EPD_DRAW_ALIGN_RIGHT,0x50);
     HOME_STAGE("calendar");
+    render_rss_overview(fb);
     ui_nav_draw(fb,0);
     HOME_STAGE("nav");
 #undef HOME_STAGE
@@ -776,6 +799,7 @@ static bool present(app_ctx_t *ctx,app_redraw_t redraw) {
 }
 static void refresh_excerpt(void) {book_excerpt_load(featured()->path,s_excerpt);}
 static void on_enter(app_ctx_t *ctx) {
+    rss_overview_load(&s_rss_overview);
     s_cover_generation=book_cover_jobs_begin();
     const uint32_t progress_revision=book_progress_revision();
     s_clock_base_attempted=false;clock_base_prepare();
@@ -935,6 +959,7 @@ static app_redraw_t on_gesture(app_ctx_t *ctx,const ui_gesture_event_t *ev) {
         if(old!=s_goal_draft){s_area=(EpdRect){36,198,612,830};return APP_REDRAW_AREA;}
     }else {
         int tab=ui_nav_hit(x,y);if(tab>=0){ui_nav_request(ctx,tab);return APP_REDRAW_NONE;}
+        if(hit(rss_card_rect(),x,y)){ui_nav_request(ctx,UI_NAV_RSS_APP_INDEX);return APP_REDRAW_NONE;}
         if(hit((EpdRect){24,640,320,365},x,y)){
             if(app_settings_home_component()==APP_HOME_FOLDER){ui_nav_request(ctx,1);return APP_REDRAW_NONE;}
             s_time_trail.valid=false;s_view=HOME_TIME;s_time_pending=false;s_time_stamp=-1;refresh_days();return APP_REDRAW_PAGE;

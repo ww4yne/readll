@@ -2,9 +2,9 @@
  * SPDX-FileCopyrightText: 2026 mindreset
  * SPDX-License-Identifier: Apache-2.0
  *
- * 产品页清单。四个主页面对应底部导航；传输由文件首页的直达按钮进入，工厂页独立。
+ * 产品页清单。注册表编号保持稳定，五栏视觉顺序由 ui_nav_layout.h 映射；工厂页独立。
  *
- * Product page table. Four main pages match the tab bar; file-home buttons open transfer directly.
+ * Product page table. Registry indices stay stable; ui_nav_layout.h maps the five visual tabs. Factory pages stay separate.
  */
 
 #include "app_registry.h"

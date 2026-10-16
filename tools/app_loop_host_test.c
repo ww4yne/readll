@@ -3,6 +3,7 @@
  * English: Run the real loop with deterministic touch and task-delay exit.
  */
 #include "app_loop.h"
+#include "app_registry.h"
 #include "ui_gesture.h"
 #include "ui_menu.h"
 #include "ui_power_dialog.h"
@@ -53,9 +54,10 @@ static bool request_on_touch, request_on_tick, menu_on_tick, menu_on_touch, canc
 static bool home_on_touch, home_on_tick, home_on_key, start_second;
 static int home_enters, home_renders, last_menu_leaf, rendered_leaf;
 static const app_desc_t* menu_background;
-static app_desc_t first, second;
-int ui_nav_hit(uint16_t x,uint16_t y){return y>=UI_NAV_TOUCH_TOP&&y<1216&&x<684?x/171:-1;}
-void ui_nav_request(app_ctx_t *ctx,int index){ctx->request_app=index==0?&first:&second;}
+static app_desc_t first, second, rss;
+static bool start_rss;
+int ui_nav_hit(uint16_t x,uint16_t y){return y>=UI_NAV_TOUCH_TOP&&y<1216&&x<684?ui_nav_app_index(x*UI_NAV_TAB_COUNT/684):-1;}
+void ui_nav_request(app_ctx_t *ctx,int index){if(ui_nav_is_main(index))ctx->request_app=app_at(index);}
 static bool full_tick, lock_due, font_due, shake_activity;
 static int64_t time_offset, time_step;
 static int du_areas, gl_areas;
@@ -143,8 +145,8 @@ static void lost(app_ctx_t*c) {(void)c;media_lost++;loss_step=step;}
 static void ready(app_ctx_t*c) {(void)c;media_ready++;}
 EpdRect ui_content_refresh_area(void) {return (EpdRect){0,0,684,1000};}
 const app_desc_t* app_home_page(void) {return &first;}
-const app_desc_t* app_at(int i) {return i==0?&first:i==1?&second:NULL;}
-int app_index_of(const app_desc_t* app) {return app==&first?0:app==&second?1:-1;}
+const app_desc_t* app_at(int i) {return i==0?&first:i==1?&second:i==5?&rss:NULL;}
+int app_index_of(const app_desc_t* app) {return app==&first?0:app==&second?1:app==&rss?5:-1;}
 int ui_key_hit_test(uint16_t x,uint16_t y) {return y>=1300 && x<480?x/160:-1;}
 bool ui_menu_handle_hit_test(uint16_t x,uint16_t y) {return x>600 && y>1100 && y<1300;}
 int ui_menu_leaf_for_app(const app_desc_t*a) {return a==&second?1:0;}
@@ -194,6 +196,7 @@ static void reset(void) {
     memset(mounted_steps,0,sizeof(mounted_steps));memset(present_steps,0,sizeof(present_steps));
     long_keys=0;
     home_on_touch=home_on_tick=home_on_key=start_second=false;
+    start_rss=false;
     home_enters=home_renders=0;rendered_leaf=-1;last_menu_leaf=-1;menu_background=NULL;
     full_tick=lock_due=font_due=shake_activity=false;time_offset=0;time_step=10000;du_areas=gl_areas=0;
     memset(samples,0,sizeof(samples));memset(keys,0,sizeof(keys));memset(events,0,sizeof(events));memset(tick_consumed,0,sizeof(tick_consumed));
@@ -201,9 +204,10 @@ static void reset(void) {
     request_on_touch=request_on_tick=menu_on_tick=menu_on_touch=cancel_clobber=false;response=APP_REDRAW_NONE;
     first=(app_desc_t){.title="first",.render=render,.on_enter=enter,.on_exit=leave,.on_touch=touch,.on_tick=tick,.on_key=key};
     second=(app_desc_t){.title="second",.render=render,.on_enter=enter};
+    rss=(app_desc_t){.title="RSS",.render=render,.on_enter=enter,.on_exit=leave};
 }
 static void add(int x,int y,int count,int error) {samples[sample_count++]=(sample_t){x,y,count,error};}
-static void run(void) {app_loop_config_t cfg={.first_app=start_second?&second:&first};if(!setjmp(done))app_loop_run(&cfg);}
+static void run(void) {app_loop_config_t cfg={.first_app=start_rss?&rss:start_second?&second:&first};if(!setjmp(done))app_loop_run(&cfg);}
 static app_redraw_t consumed_return_tick(app_ctx_t*c) { if(step==0){c->leaf=7;c->request_app=&second;}else c->request_return=true;return APP_REDRAW_NONE; }
 static app_redraw_t return_tick(app_ctx_t*c) { c->request_return=true; return APP_REDRAW_NONE; }
 static app_redraw_t origin_tick(app_ctx_t*c) { c->leaf=7; if(step==0 && request_on_tick)c->request_app=&second; return APP_REDRAW_NONE; }
@@ -217,7 +221,7 @@ static void before_lock(app_ctx_t *ctx) {(void)ctx;++before_locks;}
 static bool main_first(app_ctx_t* ctx) {(void)ctx;return main_source_visible;}
 static bool main_second(app_ctx_t* ctx) {(void)ctx;return main_target_visible;}
 static void enter_subview(app_ctx_t* ctx) {enter(ctx);main_target_visible=false;}
-static void enable_main_tabs(void) {main_fast=true;first.main_page_visible=main_first;second.main_page_visible=main_second;}
+static void enable_main_tabs(void) {main_fast=true;first.main_page_visible=main_first;second.main_page_visible=main_second;rss.main_page_visible=main_second;}
 static app_redraw_t nav_return_tick(app_ctx_t* ctx) {
     if(step==0)ctx->request_app=&second;
     else if(step==1)ctx->request_return=true;
@@ -225,6 +229,16 @@ static app_redraw_t nav_return_tick(app_ctx_t* ctx) {
 }
 static app_redraw_t main_late_tick(app_ctx_t* ctx) {(void)ctx;return step == 1 ? response : APP_REDRAW_NONE;}
 int main(void) {
+    for(int policy=0;policy<3;++policy) {
+        reset();enable_main_tabs();main_fast=policy==1;main_water=policy==2;
+        add(342,1080,1,0);add(342,1080,1,0);add(0,0,0,0);add(85,1080,1,0);run();
+        assert(enters==3&&exits==2&&nav_draws==2&&!touch_calls);
+        reset();enable_main_tabs();start_rss=true;main_fast=policy==1;main_water=policy==2;
+        add(342,1080,1,0);add(0,0,0,0);run();assert(enters==1&&!nav_draws&&!exits);
+        reset();enable_main_tabs();start_rss=true;main_target_visible=false;rss.on_gesture=gesture;
+        add(85,1080,1,0);run();assert(enters==1&&!nav_draws&&events[UI_GESTURE_PRESS]==1);
+    }
+    puts("PASS: RSS stable index 5 navigates on first contact in all modes; active RSS and article subviews do not switch");
     // 第一帧报点立即切页，尚未抬手也能响应；同次停留和释放不重复。
     // The first contact switches before lift; its subsequent hold and release never repeat navigation.
     for(int policy=0;policy<3;++policy) {

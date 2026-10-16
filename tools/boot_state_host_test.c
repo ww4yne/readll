@@ -84,6 +84,18 @@ int main(void) {
     fail_commit=false; fail_open=true;
     pico_boot_init(false); assert(pico_boot_recovery() && pico_boot_book_begin("/sdcard/book.epub")!=ESP_OK);
     fail_open=false;
+    pico_boot_init(false);pico_boot_ready();
+    const uint8_t tabs[]={0,1,2,3,UI_NAV_RSS_APP_INDEX};
+    for(size_t i=0;i<sizeof(tabs);++i) {
+        resume=(pico_resume_t){.tab=tabs[i]};
+        assert(pico_boot_save_resume(&resume)==ESP_OK);
+        pico_boot_init(false);pico_boot_ready();
+        assert(pico_boot_take_resume(&out)&&out.tab==tabs[i]&&!out.reader);
+        assert(!pico_boot_take_resume(&out));
+    }
+    resume=(pico_resume_t){.tab=4};assert(pico_boot_save_resume(&resume)==ESP_ERR_INVALID_ARG);
+    resume.tab=6;assert(pico_boot_save_resume(&resume)==ESP_ERR_INVALID_ARG);
+    resume.tab=5;resume.reader=1;assert(pico_boot_save_resume(&resume)==ESP_ERR_INVALID_ARG);
     assert(commits > 0);
     puts("PASS: one-shot reader/fullscreen resume; power-cut book quarantine; explicit retry; no false book blame; absent/corrupt NVS and commit failure; checked paths");
 }

@@ -3,6 +3,13 @@
 按版本简述对用户可见的变化；使用方法见 [README](../README.zh-CN.md)。
 User-visible changes by release; see [README](../README.md) for usage.
 
+## 0.3.3-rc97
+
+- RSS 独立置于底栏：首页 / 书架 / RSS / 文件 / 设置；移除设置中的阅读入口，正文与排版设置保留原三键操作。
+  Promote RSS to a bottom tab: Home / Bookshelf / RSS / Files / Settings. Remove the Settings reading entry and retain article/typography hardware keys.
+- 首页增加可点击的 RSS 信息卡，显示本地缓存未读、待同步操作及配置/同步状态；不联网、不预取正文，读取失败明确显示未知。
+  Add a tappable Home RSS card with cached unread, pending operations and configuration/sync status. No networking or body prefetch; failed reads explicitly show unknown counts.
+
 ## 0.3.3-rc96
 
 - 修复 RSS 已编译但产品界面没有可达入口：设置首屏「日期与时间」下新增「RSS 阅读」，四个底部标签不变。账户配置仍使用传书网页的 RSS 区域。

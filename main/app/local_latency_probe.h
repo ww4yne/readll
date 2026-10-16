@@ -29,7 +29,7 @@ static app_redraw_t local_latency_poll(app_ctx_t *ctx,const app_desc_t *current)
                 app_index_of(current),app_settings_main_refresh_mode(),app_settings_auto_lock_minutes(),app_settings_home_component(),
                 (unsigned)heap_caps_get_free_size(MALLOC_CAP_8BIT),(unsigned)heap_caps_get_free_size(MALLOC_CAP_INTERNAL),
                 (unsigned)heap_caps_get_largest_free_block(MALLOC_CAP_8BIT),(unsigned)uxTaskGetStackHighWaterMark(NULL));
-        } else if(sscanf(line,"perf page %d",&a)==1&&a>=0&&a<4) {
+        } else if(sscanf(line,"perf page %d",&a)==1&&ui_nav_is_main(a)) {
             ui_nav_request(ctx,a);ESP_LOGI("latency","REQUEST page=%d",a);
         } else if(sscanf(line,"perf mode %d",&a)==1&&a>=0&&a<=2) {
             app_settings_set_main_refresh_mode(a);ESP_LOGI("latency","MODE %d",a);

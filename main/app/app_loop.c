@@ -17,7 +17,7 @@
  * own Back/Home/Back keys; reading retains page turns, settings and hold-to-shelf.
  * Owners may opt into a single 500ms same-key hold callback after the press action; interruptions cancel it.
  * The menu handle still fires on press.
- * 用户修订：四个主页面底栏作为统一导航路由在按下时报点即响应，模态和阅读手势保持原归属。
+ * 用户修订：五个主页面底栏作为统一导航路由在按下时报点即响应，模态和阅读手势保持原归属。
  * User revision: root-tab routing commits on initial contact; modal controls and reader gestures retain their owners.
  * 用户修订：系统页面切换使用 GL16，不再每次 GC16 全刷；锁屏、手动强刷和周期清残影仍可全刷。
  * User revision: system page changes use GL16 instead of GC16; lock, manual refresh and periodic ghost cleanup may still use full refresh.
@@ -294,7 +294,7 @@ static void menu_feedback(app_ctx_t* ctx, const app_desc_t* current,
 // Leave the old page, enter the new one, then present a full page.
 static bool main_page_ready(app_ctx_t* ctx, const app_desc_t* app) {
     int index = app_index_of(app);
-    return index >= 0 && index < 4 &&
+    return ui_nav_is_main(index) &&
            app->main_page_visible && app->main_page_visible(ctx);
 }
 
@@ -412,7 +412,7 @@ static void prepare_lock(app_ctx_t *ctx, const app_desc_t *current, bool feedbac
     if (feedback) app_lock_feedback(ctx->hl);
     if (current->on_before_lock) current->on_before_lock(ctx);
     int tab = app_index_of(current);
-    pico_resume_t resume = {.tab = tab >= 0 && tab < 4 ? (uint8_t)tab : 0};
+    pico_resume_t resume = {.tab = ui_nav_is_main(tab) ? (uint8_t)tab : 0};
     bool fullscreen = false;
     if (tab == 1 && app_book_resume_context(resume.path, sizeof(resume.path), &fullscreen)) {
         resume.reader = 1;

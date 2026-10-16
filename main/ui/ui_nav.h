@@ -2,8 +2,8 @@
  * SPDX-FileCopyrightText: 2026 mindreset
  * SPDX-License-Identifier: Apache-2.0
  *
- * 中文：四个产品主页面共用的底部导航；阅读页自行隐藏。
- * English: Shared four-tab product navigation; the reader hides it.
+ * 中文：五个产品主页面共用的底部导航；书籍与 RSS 正文自行隐藏。
+ * English: Shared five-tab product navigation, hidden in book and RSS article views.
  */
 #pragma once
 
@@ -26,6 +26,6 @@ void ui_nav_clock_draw(uint8_t *fb);
 void ui_nav_wifi_icon(uint8_t *fb, int cx, int cy, int size, uint8_t gray);
 /// 二级页面共用的圆形返回按钮。/ Shared circular back control for secondary pages.
 void ui_nav_back(uint8_t *fb, int x, int y);
-/// 四栏整列热区向上扩16px，互不重叠；不改变画面和刷新区域。/ Four nonoverlapping full-column hits extend 16px upward, without changing paint or refresh bounds.
+/// 五栏整列热区向上扩16px，返回注册表编号而非栏位。/ Five full-column hits extend 16px upward and return registry indices, not slots.
 int ui_nav_hit(uint16_t x, uint16_t y);
 void ui_nav_request(app_ctx_t *ctx, int index);

@@ -25,11 +25,24 @@ images and enclosures are outside the first-release scope.
 
 ## 配置 / Configuration
 
-设备入口为 **设置 → RSS 阅读**，位于设置首屏「连接与时间」分组的「日期与时间」下方。
-不需要打开旧功能菜单；列表中键返回首页。
+底栏依次为 **首页 / 书架 / RSS / 文件 / 设置**，点 **RSS** 进入未读列表。
+首页的 RSS 信息卡也可进入；设置中不再放阅读入口。正文与 RSS 排版设置隐藏底栏，保留原三键操作；列表中键返回首页。
 
-Open **Settings → RSS 阅读**, below Date & time in the first settings screen's
-Connection & time group. The legacy menu is not needed; the middle list key returns Home.
+The bottom tabs are **Home / Bookshelf / RSS / Files / Settings**. Open the unread
+list from **RSS** or the RSS card on Home, not Settings. Article and RSS typography
+views hide the tabs and retain their hardware keys; the middle list key returns Home.
+
+首页信息卡显示**缓存未读数**与**待同步操作数**，叠加尚未确认的已读/未读操作，不冒充服务端总未读数（本地最多 128 条 metadata）。
+配置、缓存、存储或内存读取失败显示具体状态与未知计数，不显示假的零。同步结果只保留本次开机已知状态；冷启动显示本地列表状态，不声称刚刚同步成功。
+进入首页读取一次本地快照，绘制与空闲时钟更新不读缓存、不联网，不获取或保存正文。
+
+Home shows **cached unread** and **pending-operation** counts, applying unconfirmed
+read/unread overrides. These are not server-wide totals: the local cache holds at
+most 128 metadata entries. Configuration/cache/storage/memory failures show an
+explicit status and unknown counts, not a fabricated zero. Sync results reflect
+this boot only; cold boot reports a local list rather than claiming recent success.
+Home loads its snapshot once on entry. Painting and idle clock updates do not read
+the cache, connect, fetch bodies or persist them.
 
 在设备传书网页的 RSS 区域填写 Miniflux 地址和 API Key。地址必须使用 HTTPS；保存前会调用
 `/v1/me` 验证。已有 Token 不会从设备回显，只能覆盖或清除。

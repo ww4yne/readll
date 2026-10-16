@@ -43,7 +43,7 @@ app_home_component_t app_settings_home_component(void);
 esp_err_t app_settings_set_home_component(app_home_component_t component);
 uint8_t app_settings_home_goal_minutes(void);
 esp_err_t app_settings_set_home_goal_minutes(uint8_t minutes);
-/// 主页刷新模式，只控制四个主页面；默认普通。/ Main-tab refresh mode; ordinary by default.
+/// 主页刷新模式，只控制主页面；默认普通。/ Main-tab refresh mode; ordinary by default.
 typedef enum {
     APP_MAIN_REFRESH_NORMAL = 0, ///< 普通灰阶 / Ordinary grayscale
     APP_MAIN_REFRESH_FAST = 1,   ///< 黑白快刷与灰阶亚克力 / Monochrome fast with gray acrylic

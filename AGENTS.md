@@ -40,8 +40,8 @@ The repository is `ww4yne/readll`; Pages publishes builds to `https://ww4yne.git
 功能与交互跟随 kiikoread，readll 自行维护 RSS、身份、单页网站及设备联网 OTA 禁用边界。当前审查基线见 `tools/upstream.json`；每次构建检查远端变化但不合并，Pages 发布拒绝未审查变化。只有显式离线本机构建可使用 `READLL_SKIP_UPSTREAM_CHECK=ON`。
 Follow kiikoread functionality and interactions; maintain readll RSS, identity, single-page site and disabled device-side online OTA boundaries. Reviewed baselines live in `tools/upstream.json`; every build checks remote changes without merging, and Pages rejects unreviewed changes. Only explicit local offline builds may set `READLL_SKIP_UPSTREAM_CHECK=ON`.
 
-RSS 的产品入口是设置首屏「日期与时间」下的「RSS 阅读」；只注册页面不代表入口可达，禁止依赖产品页已关闭的旧功能菜单。
-The product RSS entry is RSS reading below Date & time on the first Settings screen. Registering a page does not make it reachable; never rely on the legacy menu disabled on product pages.
+底栏顺序为首页 / 书架 / RSS / 文件 / 设置；RSS 列表显示底栏，正文和排版设置隐藏。注册表编号仍为首页0、书架1、文件2、设置3、图片4、RSS5，由 `ui_nav_layout.h` 映射视觉顺序，不得重排破坏恢复记录。首页 RSS 卡只在进入时读取本地快照，不联网、不获取正文。
+Bottom order is Home / Bookshelf / RSS / Files / Settings; the RSS list shows tabs, articles and typography hide them. Registry indices stay Home0/Books1/Files2/Settings3/Image4/RSS5; `ui_nav_layout.h` maps visual order without breaking persisted resumes. Home reads the RSS snapshot on entry only, without networking or bodies.
 
 在配置并审核新的 OTA origin 前，仅设备内联网 OTA 必须显式禁用：UI 与调用路径返回“尚未配置”，不得请求任何旧站点或旧仓库，也不得静默回退。WebUSB 网页刷机、静态站 staging、完整 USB 包与 TF 本地升级必须继续可用；不要编造新域名。
 Until a new OTA origin is configured and reviewed, only device-side online OTA is disabled: the UI and call path report “not configured”, never request a legacy website or repository, and never silently fall back. WebUSB flashing, static-site staging, complete USB packages and local TF updates must remain available; do not invent a domain.

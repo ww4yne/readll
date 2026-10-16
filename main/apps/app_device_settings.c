@@ -18,8 +18,6 @@
  * Approved revision: size and preview live with the UI face; ask before syncing the reading face, and group connection/display/personalization/maintenance.
  * 用户撤回跟手滚动：三种主页模式统一恢复一次手势推进一段列表并差分刷新的原逻辑，无惯性、浅墨或停稳补刷。
  * User rollback: all main modes return to one discrete list step per gesture with differential updates, without inertia, light motion ink or idle restoration.
- * RSS 阅读由主设置中的可见行进入，不依赖产品页已关闭的旧功能菜单。
- * Open RSS from a visible main-settings row, never from the legacy menu disabled on product pages.
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -300,7 +298,7 @@ static int settings_main_row_height(void) {
     return 82;
 }
 #define SETTINGS_ROW_H settings_main_row_height()
-#define SETTINGS_WIRELESS_ROWS 4
+#define SETTINGS_WIRELESS_ROWS 3
 #define SETTINGS_DISPLAY_ROWS 6
 #define SETTINGS_PERSONAL_ROWS 4
 #define SETTINGS_MAINTENANCE_ROWS 4
@@ -704,7 +702,6 @@ static void setting_icon(uint8_t *fb, int index, int cx, int cy) {
         UI_ICON_SLIDERS_HORIZONTAL, // 15 主页刷新模式 / Main refresh mode
         UI_ICON_LOCK,              // 16 锁屏密码 / lock screen password
         UI_ICON_ROTATE_CW,         // 17 屏幕修复 / panel repair
-        UI_ICON_BOOK_OPEN,         // 18 RSS 阅读 / RSS reading
     };
     if (index < 0 || index >= (int)(sizeof(icons) / sizeof(icons[0]))) return;
     ui_draw_icon(fb, cx, cy, SETTINGS_ICON_PX, icons[index], SETTINGS_ICON_INK);
@@ -1337,9 +1334,9 @@ static void render(app_ctx_t *ctx, uint8_t *fb) {
         ui_draw_icon(fb,625,profile_y+profile_h/2,26,UI_ICON_CHEVRON_RIGHT,UI_GRAY_BLACK);
     }
     char wifi[56];snprintf(wifi,sizeof(wifi),"%s",s_main_wifi_saved?s_main_wifi:"未配置");
-    const char *connection_labels[]={"WiFi","蓝牙翻页器","日期与时间","RSS 阅读"};
-    const char *connection_values[]={wifi,app_settings_ble_turner()?"已开启":"已关闭","设置","打开"};
-    const int connection_icons[]={0,1,6,18};
+    const char *connection_labels[]={"WiFi","蓝牙翻页器","日期与时间"};
+    const char *connection_values[]={wifi,app_settings_ble_turner()?"已开启":"已关闭","设置"};
+    const int connection_icons[]={0,1,6};
     setting_group(fb,SETTINGS_WIRELESS_Y-49,"连接与时间",SETTINGS_WIRELESS_Y,
                   connection_icons,connection_labels,connection_values,SETTINGS_WIRELESS_ROWS);
     char font_name[96],contrast[24],idle[24],signature[96];
@@ -2161,9 +2158,7 @@ static app_redraw_t on_gesture(app_ctx_t *ctx, const ui_gesture_event_t *ev) {
             s_page=SETTINGS_BLUETOOTH;s_ble_scroll=s_ble_learning=0;s_ble_notice[0]=s_ble_feedback[0]=0;
             ble_pt_raw_t unused;while(ble_pt_pop_raw(&unused)){}return APP_REDRAW_PAGE;
         }
-        if(row==2) {s_page=SETTINGS_TIME;return APP_REDRAW_PAGE;}
-        extern const app_desc_t app_rss;
-        ctx->request_app=&app_rss;return APP_REDRAW_NONE;
+        s_page=SETTINGS_TIME;return APP_REDRAW_PAGE;
     }
     if(y>=SETTINGS_DISPLAY_Y && y<SETTINGS_DISPLAY_Y+SETTINGS_DISPLAY_ROWS*SETTINGS_ROW_H) {
         row=(y-SETTINGS_DISPLAY_Y)/SETTINGS_ROW_H;

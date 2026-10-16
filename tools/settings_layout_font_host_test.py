@@ -36,8 +36,7 @@ assert main.endswith('}')
 main=main[:-1]
 enum=s[s.index('typedef enum { SETTINGS_MAIN'):s.index('} settings_page_t;')+len('} settings_page_t;')]
 macros='\n'.join(re.findall(r'^#define SETTINGS_(?:ROW_H|WIRELESS_ROWS|DISPLAY_ROWS|PERSONAL_ROWS|MAINTENANCE_ROWS|WIRELESS_Y|DISPLAY_Y|PERSONAL_Y|MAINTENANCE_Y)[^\n]*',s,re.M))
-assert '"RSS 阅读"' in fn('render')
-assert 'UI_ICON_BOOK_OPEN' in fn('setting_icon')
+assert '"RSS 阅读"' not in fn('render')
 layout=s[s.index('typedef struct {\n    EpdRect size, preview;'):s.index('static system_font_layout_t system_font_layout(')]
 unit=r'''
 #include <assert.h>
@@ -52,7 +51,6 @@ enum{UI_GESTURE_TAP,UI_GESTURE_SWIPE_U};
 typedef struct{int unused;}app_desc_t;
 typedef struct{const app_desc_t*request_app;}app_ctx_t;
 const app_desc_t app_transfer={0};
-const app_desc_t app_rss={1};
 typedef struct{int unused;}ble_pt_raw_t;
 typedef struct{const char *path;}ttf_font_item_t;
 static const ttf_font_item_t fonts[]={{"/sdcard/fonts/A.ttf"},{"/sdcard/fonts/B.ttf"},{"/sdcard/fonts/C.ttf"}};
@@ -104,7 +102,7 @@ int main(void){
    assert(SETTINGS_PERSONAL_Y>SETTINGS_DISPLAY_Y+6*SETTINGS_ROW_H);
    const int tops[]={SETTINGS_WIRELESS_Y,SETTINGS_DISPLAY_Y,SETTINGS_PERSONAL_Y,SETTINGS_MAINTENANCE_Y};
    const int counts[]={SETTINGS_WIRELESS_ROWS,SETTINGS_DISPLAY_ROWS,SETTINGS_PERSONAL_ROWS,SETTINGS_MAINTENANCE_ROWS};
-   const int destinations[][6]={{-1,SETTINGS_BLUETOOTH,SETTINGS_TIME,-4},
+   const int destinations[][6]={{-1,SETTINGS_BLUETOOTH,SETTINGS_TIME},
      {SETTINGS_SYSTEM_FONT,SETTINGS_SYSTEM_CONTRAST,SETTINGS_MAIN_REFRESH,-2,SETTINGS_AUTO_LOCK,SETTINGS_POWER_SLEEP},
      {SETTINGS_SHELF_STYLE,SETTINGS_LOCK_STYLE,SETTINGS_LOCK_PIN,-3},
      {SETTINGS_UPGRADE,SETTINGS_CONFIG,-5,SETTINGS_BOOT}};
@@ -122,7 +120,6 @@ int main(void){
      }
      else if(destinations[group][i]==-1)assert(ctx.request_app==&app_transfer);
      else if(destinations[group][i]==-2)assert(s_page==SETTINGS_MAIN);
-     else if(destinations[group][i]==-4)assert(ctx.request_app==&app_rss&&s_page==SETTINGS_MAIN);
      else if(destinations[group][i]==-5)assert(s_panel_repair_pending);
      else assert(profile_edits>0);
      s_page=SETTINGS_MAIN;assert(main_tap(&ctx,10,500)==APP_REDRAW_NONE&&s_page==SETTINGS_MAIN);
@@ -130,9 +127,6 @@ int main(void){
    s_main_scroll=SETTINGS_SCROLL_MAX;s_page=SETTINGS_MAIN;
    int last=SETTINGS_MAINTENANCE_Y+SETTINGS_MAINTENANCE_ROWS*SETTINGS_ROW_H-1-s_main_scroll;
    assert(last<UI_NAV_TOP&&main_tap(&ctx,300,last)==APP_REDRAW_PAGE&&s_page==SETTINGS_BOOT);
-   s_main_scroll=0;s_page=SETTINGS_MAIN;ctx.request_app=NULL;
-   assert(main_tap(&ctx,300,SETTINGS_WIRELESS_Y+3*SETTINGS_ROW_H+SETTINGS_ROW_H/2)==APP_REDRAW_NONE);
-   assert(ctx.request_app==&app_rss&&s_page==SETTINGS_MAIN);
  }
  scale=100;s_page=SETTINGS_SYSTEM_FONT;s_font_page=0;s_main_scroll=0;s_font_sync_confirm=false;
  for(int i=0;i<11;++i){EpdRect r=system_font_layout().size;assert(font_tap(300,r.y+r.height/2)==APP_REDRAW_PAGE);assert(scale==((i+1)%11)*10+100);}
@@ -150,7 +144,7 @@ int main(void){
  assert(font_tap(300,r.y+r.height/2)==APP_REDRAW_PAGE&&!s_font_sync_confirm&&system_activations==before&&!strcmp(system_path,fonts[0].path));
  write_fail=false;assert(font_tap(300,r.y+r.height+7)==APP_REDRAW_NONE);
  assert(wifi_requests&&font_scans&&system_activations);
- puts("PASS: 11 scales, all 18 destinations including first-screen RSS, reachable final row, font-size cycle, modal isolation, opt-in sync, no reading-font load and failed-save retry");
+ puts("PASS: 11 scales, all 17 settings destinations, reachable final row, font-size cycle, modal isolation, opt-in sync, no reading-font load and failed-save retry");
 }
 '''
 with tempfile.TemporaryDirectory(dir=root/'build') as folder:

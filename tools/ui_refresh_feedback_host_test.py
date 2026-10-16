@@ -5,6 +5,7 @@ from pathlib import Path
 import re
 import subprocess
 import tempfile
+import sys
 
 root = Path(__file__).resolve().parents[1]
 
@@ -431,17 +432,21 @@ typedef struct {int x,y,width,height;} EpdRect;
 #define UI_NAV_TAB_ICON_PX 44
 enum {UI_CLICK_NAV};
 static void ui_click_feedback_register(uint8_t *fb,EpdRect r,int kind,ui_icon_t icon){(void)fb;(void)icon;assert(kind==UI_CLICK_NAV&&r.width==60&&r.height==60);}
-static const char *const labels[]={"首页","书架","文件管理","设置"};
+static const char *const labels[]={"首页","书架","RSS","文件","设置"};
+typedef struct {int index;} app_desc_t;
+typedef struct {const app_desc_t *request_app;} app_ctx_t;
+static const app_desc_t apps[]={{0},{1},{2},{3},{4},{5}};
+static const app_desc_t *app_at(int index){assert(index>=0&&index<6);return &apps[index];}
 enum {APP_MAIN_REFRESH_NORMAL,APP_MAIN_REFRESH_FAST,APP_MAIN_REFRESH_WATER};
 static int main_choice;
 static int app_settings_main_refresh_mode(void){return main_choice;}
-static int first_ink, markers, tracks, texts, guards;
+static int first_ink, markers, tracks, texts, guards, marker_x;
 static uint8_t ui_read_pixel(const uint8_t *fb,int x,int y){(void)fb;(void)x;(void)y;return 14;}
 static uint8_t ui_contrast_gray(uint8_t value){return value&240;}
 static void epd_draw_pixel(int x,int y,uint8_t value,uint8_t *fb){(void)x;(void)value;(void)fb;if(y<first_ink)first_ink=y;}
 static void epd_fill_rect(EpdRect area,int gray,uint8_t *fb){
  (void)fb;
- if(area.y==UI_NAV_TOP+1){assert(area.height==5);if(gray==UI_GRAY_BLACK){assert(area.width==56);++markers;}
+ if(area.y==UI_NAV_TOP+1){assert(area.height==5);if(gray==UI_GRAY_BLACK){assert(area.width==56);marker_x=area.x;++markers;}
  else {assert(gray==UI_GRAY_WHITE&&area.width==UI_LOCK_WIDTH);++tracks;}}
  if(area.y==UI_NAV_REFRESH_END){assert(area.height==UI_NAV_TOP-UI_NAV_REFRESH_END&&area.width==UI_LOCK_WIDTH&&gray==0xf0);++guards;}
 }
@@ -450,26 +455,35 @@ static void ui_text(uint8_t *fb,int x,int y,int px,const char *label,int align,b
 '''
 navigation += 'static void ui_fill_rect_fast(EpdRect r,uint8_t gray,uint8_t *fb){epd_fill_rect(r,gray,fb);}'
 for path, name in (("main/ui/ui_kit.c", "icon_nibble"), ("main/ui/ui_kit.c", "ui_draw_icon"),
-                   ("main/ui/ui_nav.c", "icon"), ("main/ui/ui_nav.c", "ui_nav_draw"), ("main/ui/ui_nav.c", "ui_nav_hit")):
+                   ("main/ui/ui_nav.c", "icon"), ("main/ui/ui_nav.c", "ui_nav_draw"), ("main/ui/ui_nav.c", "ui_nav_hit"),
+                   ("main/ui/ui_nav.c", "ui_nav_request")):
     navigation += function(path, name) + "\n"
 navigation += r'''
 int main(void){
  uint8_t fb=0;
+ const int expected[]={0,1,5,2,3};
  for(int x=0;x<684;++x){
    assert(ui_nav_hit(x,UI_NAV_TOUCH_TOP-1)==-1);
-   for(int y=UI_NAV_TOUCH_TOP;y<1216;++y)assert(ui_nav_hit(x,y)==x/171);
+   for(int y=UI_NAV_TOUCH_TOP;y<1216;++y)assert(ui_nav_hit(x,y)==expected[x*5/684]);
    assert(ui_nav_hit(x,1216)==-1);
  }
  assert(ui_nav_hit(684,1141)==-1&&ui_nav_hit(UINT16_MAX,1141)==-1);
  assert(UI_NAV_TOUCH_TOP==1080&&UI_NAV_TOP==1096&&UI_NAV_REFRESH_END==1088);
- for(main_choice=0;main_choice<3;++main_choice)for(int active=0;active<4;++active){
+ for(main_choice=0;main_choice<3;++main_choice)for(int slot=0;slot<5;++slot){
+   int active=expected[slot];
+   app_ctx_t ctx={0};ui_nav_request(&ctx,active);assert(ctx.request_app==&apps[active]);
    first_ink=2000;markers=tracks=texts=guards=0;ui_nav_draw(&fb,active);
-   assert(markers==1&&texts==4&&tracks==(main_choice!=0)&&guards==1);
+   assert(markers==1&&texts==5&&tracks==(main_choice!=0)&&guards==1);
+   assert(marker_x==(slot*2+1)*684/10-28);
    // 验证真实图标掩模的第一笔，单次刷新32列对齐后不能触碰图标。
    // Check actual mask ink: the 32-column-expanded single update must not reach an icon.
    assert(first_ink>=UI_NAV_MARKER_SCAN_END);
    assert(UI_NAV_REFRESH_END%32==0&&UI_NAV_REFRESH_END<UI_NAV_TOP+1);
  }
+ app_ctx_t ctx={0};
+ ui_nav_request(&ctx,4);assert(!ctx.request_app);
+ ui_nav_request(&ctx,6);assert(!ctx.request_app);
+ markers=0;ui_nav_draw(&fb,4);assert(!markers);
  puts("PASS: aligned content refresh stops above marker and actual navigation masks; blank guard and production layout retained");
 }
 '''
@@ -526,6 +540,8 @@ int main(void){
 with tempfile.TemporaryDirectory() as folder:
     for name, unit in (("shelf", shelf), ("status", status),
                        ("nav-modes", navigation), ("image-bw", image_bw)):
+        if "--only-navigation" in sys.argv and name != "nav-modes":
+            continue
         source, binary = Path(folder) / (name + ".c"), Path(folder) / name
         source.write_text(unit)
         extras = [str(root / "main/ui/ui_image_dither.c")] if name == "image-bw" else []

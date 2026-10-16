@@ -125,10 +125,10 @@ int main(void){
  assert(ui_click_feedback_press(frame,85,1188,&r));ui_click_feedback_begin(frame);assert(!live&&!ui_click_feedback_release(frame,&r));
  // 三种主页模式的底栏共用灰底：按压不能改外沿、文字、横条或相邻图标。
  // All three main modes share a gray footer: presses must preserve its perimeter, labels, marker and neighboring icons.
- static const ui_icon_t tabs[]={UI_ICON_HOUSE,UI_ICON_LIBRARY_BIG,UI_ICON_FOLDER_OPEN,UI_ICON_SLIDERS_HORIZONTAL};
- for(int tab=0;tab<4;++tab)for(int policy=0;policy<3;++policy)for(int edge=0;edge<2;++edge){
+ static const ui_icon_t tabs[]={UI_ICON_HOUSE,UI_ICON_LIBRARY_BIG,UI_ICON_BOOK_OPEN,UI_ICON_FOLDER_OPEN,UI_ICON_SLIDERS_HORIZONTAL};
+ for(int tab=0;tab<5;++tab)for(int policy=0;policy<3;++policy)for(int edge=0;edge<2;++edge){
   fast=policy==1;memset(frame,0xee,BYTES);
-  int cx=(tab*2+1)*684/8;
+  int cx=(tab*2+1)*684/10;
   epd_fill_rect((EpdRect){0,1097,684,5},0,frame);
   epd_fill_rect((EpdRect){0,1170,684,2},0x70,frame);
   ui_draw_icon(frame,cx,1141,44,tabs[tab],0);
@@ -146,7 +146,20 @@ int main(void){
   if(policy==0)memcpy(again,frame,BYTES);else assert(!memcmp(frame,again,BYTES));
   assert(r.y>=UI_NAV_MARKER_SCAN_END&&r.y+r.height<=1170);
   EpdRect pressed=r;
-  assert(ui_click_feedback_release(frame,&r)&&!memcmp(&r,&pressed,sizeof(r))&&!live&&!memcmp(frame,saved,BYTES));
+  assert(ui_click_feedback_release(frame,&r));
+  assert(!memcmp(&r,&pressed,sizeof(r))&&!live);
+  assert(!memcmp(frame,saved,BYTES));
+ }
+ for(int slot=0;slot<5;++slot){
+  memset(frame,0xee,BYTES);ui_click_feedback_begin(frame);
+  for(int i=0;i<5;++i){int cx=(i*2+1)*684/10;ui_click_feedback_register(frame,(EpdRect){cx-30,1111,60,60},UI_CLICK_NAV,tabs[i]);}
+  int left=(slot*684+4)/5,right=((slot+1)*684+4)/5;
+  assert(ui_click_feedback_press(frame,left,1141,&r)&&s_active.icon==tabs[slot]);
+  assert(!ui_click_feedback_cancel_at(left+1,1141)&&ui_click_feedback_cancel_at(left-1,1141));
+  assert(ui_click_feedback_release(frame,&r));
+  assert(ui_click_feedback_press(frame,right-1,1141,&r)&&s_active.icon==tabs[slot]);
+  assert(!ui_click_feedback_cancel_at(right-2,1141)&&ui_click_feedback_cancel_at(right,1141));
+  assert(ui_click_feedback_release(frame,&r));
  }
  // 原尺寸保持精确位图；缩放产生中间覆盖率且不改变空白与满墨端点。
  // Native sizes remain exact; scaling produces intermediate coverage with preserved blank/full endpoints.
@@ -157,7 +170,7 @@ int main(void){
  assert(intermediate>100);
  memset(han+5,0,sizeof(han)-5);for(int y=0;y<72;++y)for(int x=0;x<72;++x)assert(!ui_hanzi_coverage(han,72,72,x,y));
  memset(han+5,255,sizeof(han)-5);assert(ui_hanzi_coverage(han,39,39,19,19)==255);
- puts("PASS: actual quick layer uses no allocations, grayscale in all three modes and deterministic masks across four rotations; 12 navigation presses preserve gray backgrounds/labels/marker/neighbors in all modes; click cache <=4096 bytes restores exact pixels, ignores prefetch and tolerates OOM; Han scaling retains native bits and smooths enlarged edges");
+ puts("PASS: actual quick layer uses no allocations, grayscale in all three modes and deterministic masks across four rotations; 30 five-tab navigation presses preserve backgrounds/labels/marker/neighbors; exact column boundaries select the correct icon and cancel crossing; click cache <=4096 bytes restores exact pixels and tolerates OOM; Han scaling preserves native bits");
  return 0;
 }
 '''

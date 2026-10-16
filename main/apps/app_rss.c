@@ -12,6 +12,8 @@
  * 冻结：为快速跳读只持久化列表；打开时获取正文，返回列表即释放，不按时间缓存。
  * Frozen: persist only the list for quick triage; fetch bodies on open and free on return,
  * without time-based body caching.
+ * 用户修订：列表是独立底栏入口；首页概览只读本地列表和待同步状态，不联网或加载正文。
+ * User revision: the list is a main tab; the Home overview reads local metadata and pending state without networking or bodies.
  */
 
 #include <errno.h>
@@ -33,6 +35,7 @@
 #include "rss_cache.h"
 #include "rss_client.h"
 #include "rss_preferences.h"
+#include "rss_overview.h"
 #include "rss_sync.h"
 #include "settings.h"
 #include "ttf_font.h"
@@ -45,9 +48,9 @@
 #define RSS_PENDING_FILE "/flash/rss.pending"
 #define RSS_LIST_ROWS 12
 #define RSS_LIST_TOP 156
-#define RSS_LIST_BOTTOM 1092
+#define RSS_LIST_BOTTOM 1056
 #define RSS_LIST_ROW_HEIGHT ((RSS_LIST_BOTTOM - RSS_LIST_TOP) / RSS_LIST_ROWS)
-#define RSS_FOOTER_TOP RSS_LIST_BOTTOM
+#define RSS_FOOTER_TOP 1092
 #define RSS_TITLE_PX 24
 #define RSS_SOURCE_ICON_SIZE 44
 #define RSS_PROGRESS_HEIGHT 4
@@ -94,6 +97,7 @@ static int64_t s_next_refresh_ms;
 static uint32_t s_network_signature;
 static read_pico_transfer_status_t s_network_status;
 static char s_notice[128];
+static char s_last_sync_status[64];
 
 static void close_article(void);
 
@@ -289,6 +293,59 @@ static bool prepare_storage(void) {
     book_store_root_t roots[BOOK_STORE_ROOT_MAX];
     int count = 0;
     return book_store_roots(roots, &count) == ESP_OK && book_store_flash_ready();
+}
+
+void rss_overview_load(rss_overview_t *out) {
+    memset(out, 0, sizeof(*out));
+    char base[READ_PICO_MINIFLUX_BASE_URL_MAX + 1] = {0};
+    char token[READ_PICO_MINIFLUX_TOKEN_MAX + 1] = {0};
+    esp_err_t configured = read_pico_transfer_miniflux_get(base, sizeof(base), token, sizeof(token));
+    secure_clear(token, sizeof(token));
+    if (configured != ESP_OK) {
+        snprintf(out->status, sizeof(out->status), "%s",
+                 configured == ESP_ERR_NOT_FOUND ? "未配置 Miniflux" : "Miniflux 配置读取失败");
+        return;
+    }
+    if (!prepare_storage()) {
+        snprintf(out->status, sizeof(out->status), "内部存储不可用");
+        return;
+    }
+    rss_cache_t *cache = heap_caps_malloc(sizeof(*cache), MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+    rss_pending_file_t *pending = heap_caps_malloc(sizeof(*pending), MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+    if (!cache || !pending) {
+        snprintf(out->status, sizeof(out->status), "RSS 内存不足");
+        free(cache);
+        free(pending);
+        return;
+    }
+    struct stat st;
+    bool cache_missing = stat(RSS_CACHE_FILE, &st) != 0 && errno == ENOENT;
+    rss_cache_result_t result = rss_cache_load(RSS_CACHE_FILE, cache);
+    bool pending_ok = pending_read_file(RSS_PENDING_FILE, pending) ||
+                      pending_read_file(RSS_PENDING_FILE ".bak", pending);
+    bool pending_missing = stat(RSS_PENDING_FILE, &st) != 0 && errno == ENOENT;
+    bool backup_missing = stat(RSS_PENDING_FILE ".bak", &st) != 0 && errno == ENOENT;
+    if (result != RSS_CACHE_OK || (!pending_ok && !(pending_missing && backup_missing))) {
+        snprintf(out->status, sizeof(out->status), "%s",
+                 result != RSS_CACHE_OK ? (cache_missing ? "尚无本地列表，打开 RSS 同步" : "缓存读取失败")
+                                        : "待同步状态读取失败");
+    } else {
+        out->counts_known = true;
+        out->pending = pending_ok ? pending->count : 0;
+        for (size_t i = 0; i < cache->metadata_count; ++i) {
+            const rss_entry_t *entry = &cache->metadata[i].entry;
+            bool read = entry->status == RSS_ENTRY_STATUS_READ;
+            for (size_t j = 0; j < out->pending; ++j)
+                if (pending->operations[j].entry_id == entry->id &&
+                    pending->operations[j].desired.read_known)
+                    read = pending->operations[j].desired.read;
+            if (!read) ++out->unread;
+        }
+        snprintf(out->status, sizeof(out->status), "%s",
+                 s_last_sync_status[0] ? s_last_sync_status : "本地列表 · 打开 RSS 联网同步");
+    }
+    free(pending);
+    free(cache);
 }
 
 static void load_cache(void) {
@@ -570,7 +627,7 @@ static const char *list_footer_middle(char buffer[40]) {
         }
         return "同步失败";
     }
-    return "产品首页";
+    return "左右滑动翻页";
 }
 
 static void draw_list(uint8_t *fb) {
@@ -610,8 +667,14 @@ static void draw_list(uint8_t *fb) {
                             "没有未读文章";
         ui_text_fixed(fb, 342, 560, 30, empty, EPD_DRAW_ALIGN_CENTER, false);
     }
-    char middle[40];
-    draw_footer(fb, "上一页", list_footer_middle(middle), "下一页");
+    char middle[40], status[128], page[32];
+    snprintf(status, sizeof(status), "%s", list_footer_middle(middle));
+    (void)ui_text_title_fit(status, 18, 490, status);
+    ui_text_fixed_vc(fb, 36, 1068, 18, status, EPD_DRAW_ALIGN_LEFT, false);
+    unsigned pages = (unsigned)((s_visible_count + RSS_LIST_ROWS - 1) / RSS_LIST_ROWS);
+    snprintf(page, sizeof(page), "%u / %u", (unsigned)s_list_page + 1, pages ? pages : 1);
+    ui_text_fixed_vc(fb, 648, 1068, 18, page, EPD_DRAW_ALIGN_RIGHT, false);
+    ui_nav_draw(fb, UI_NAV_RSS_APP_INDEX);
 }
 
 static void draw_article(uint8_t *fb) {
@@ -656,7 +719,7 @@ static void draw_settings(uint8_t *fb) {
     ui_nav_back(fb, 36, 79);
     ui_text_vc(fb, 92, 103, 34, "RSS 设置", EPD_DRAW_ALIGN_LEFT, false);
     ui_hairline(fb, RSS_LIST_TOP - 1, 0, UI_LOCK_WIDTH, RSS_GRAY_DARK);
-    const int row_height = (RSS_LIST_BOTTOM - RSS_LIST_TOP) / 10;
+    const int row_height = (RSS_FOOTER_TOP - RSS_LIST_TOP) / 10;
     for (int row = 0; row < 10; ++row) {
         int y = RSS_LIST_TOP + row * row_height;
         char value[48];
@@ -674,6 +737,7 @@ static void render(app_ctx_t *ctx, uint8_t *fb) {
     ui_clear_page(fb);
     if (!s_cache) {
         ui_text_fixed(fb, 342, 560, 30, "RSS 内存不足", EPD_DRAW_ALIGN_CENTER, false);
+        ui_nav_draw(fb, UI_NAV_RSS_APP_INDEX);
         return;
     }
     if (s_view == RSS_VIEW_LIST) draw_list(fb);
@@ -686,6 +750,7 @@ static void on_enter(app_ctx_t *ctx) {
     app_font_activate_system();
     s_view = RSS_VIEW_LIST;
     s_list_page = 0;
+    s_visible_count = 0;
     s_article_page = 0;
     s_article_page_count = 1;
     rss_preferences_load(&s_preferences);
@@ -702,6 +767,7 @@ static void on_enter(app_ctx_t *ctx) {
     memset(&s_network_status, 0, sizeof(s_network_status));
     s_notice[0] = 0;
     if (!allocate_core()) {
+        free_core();
         snprintf(s_notice, sizeof(s_notice), "RSS 内存不足");
         return;
     }
@@ -737,6 +803,10 @@ static void on_before_lock(app_ctx_t *ctx) {
 static void rss_on_exit(app_ctx_t *ctx) {
     (void)ctx;
     persist_state();
+    char middle[40];
+    snprintf(s_last_sync_status, sizeof(s_last_sync_status), "%s",
+             s_sync.state == RSS_SYNC_FAILED ? list_footer_middle(middle) :
+             s_sync.state == RSS_SYNC_COMPLETE ? "上次同步成功" : "打开 RSS 继续同步");
     if (s_network_owned) read_pico_transfer_stop();
     free_core();
     s_network_owned = false;
@@ -858,9 +928,9 @@ static app_redraw_t settings_gesture(const ui_gesture_event_t *event) {
         s_view = RSS_VIEW_LIST;
         return APP_REDRAW_PAGE;
     }
-    if (event->y0 < RSS_LIST_TOP || event->y0 >= RSS_LIST_BOTTOM)
+    if (event->y0 < RSS_LIST_TOP || event->y0 >= RSS_FOOTER_TOP)
         return APP_REDRAW_NONE;
-    int row_height = (RSS_LIST_BOTTOM - RSS_LIST_TOP) / 10;
+    int row_height = (RSS_FOOTER_TOP - RSS_LIST_TOP) / 10;
     int row = ((int)event->y0 - RSS_LIST_TOP) / row_height;
     rss_preferences_t next = s_preferences;
     static const uint8_t px_values[] = {18, 20, 22, 24, 26, 28, 30, 32};
@@ -915,8 +985,15 @@ static app_redraw_t settings_gesture(const ui_gesture_event_t *event) {
 }
 
 static app_redraw_t on_gesture(app_ctx_t *ctx, const ui_gesture_event_t *event) {
-    (void)ctx;
-    if (s_view == RSS_VIEW_LIST) return list_gesture(event);
+    if (s_view == RSS_VIEW_LIST) {
+        int index = ui_nav_hit(event->x0, event->y0);
+        if (event->type == UI_GESTURE_TAP && index >= 0) {
+            if (index != UI_NAV_RSS_APP_INDEX) ui_nav_request(ctx, index);
+            return APP_REDRAW_NONE;
+        }
+        if (!s_cache) return APP_REDRAW_NONE;
+        return list_gesture(event);
+    }
     if (s_view == RSS_VIEW_ARTICLE) return article_gesture(event);
     return settings_gesture(event);
 }
@@ -1023,12 +1100,18 @@ static bool menu_handle_enabled(app_ctx_t *ctx) {
     return false;
 }
 
+static bool main_page_visible(app_ctx_t *ctx) {
+    (void)ctx;
+    return s_view == RSS_VIEW_LIST;
+}
+
 const app_desc_t app_rss = {
     .title = "RSS",
     .detail = "Miniflux 未读队列",
     .enter_full = false,
     .owns_keys = true,
     .menu_handle_enabled = menu_handle_enabled,
+    .main_page_visible = main_page_visible,
     .on_enter = on_enter,
     .on_exit = rss_on_exit,
     .on_before_lock = on_before_lock,

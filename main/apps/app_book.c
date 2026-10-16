@@ -25,7 +25,7 @@
  * 用户修订：长按图书可用本机拼音输入编辑书名；阅读时长与翻页真实记录，供票根锁屏使用。
  * 用户最新修订：书名编辑可点选插入位置并用左右键微调，支持在文字中间插入和删除。
  * 用户授权新输入法：书名和搜索共用九宫格/全键盘、中英文及离线词语候选，不改正文排版。
- * 用户修订：首页、书架、文件、设置四栏导航；切换界面采用 GL16，章节首页单独排标题。
+ * 用户修订：RSS 作为阅读入口加入首页、书架、文件、设置之间的五栏导航；切换采用 GL16，章节首页单独排标题。
  * 用户修订：EPUB 章节首页以书内目录标题为准，正文题头仅在相同时折叠，避免引言误判。
  * 用户修订：阅读进度条无外伸刻度并使用圆角；继续阅读区显示最近书籍封面。
  * 用户修订：书架整页读取成品缓存后一次显示；首次生成有界分批处理，但整页封面一起显现，不逐本推屏。
@@ -79,7 +79,7 @@
  * Latest user revision: the title editor can place and move an insertion caret for edits in the middle of text.
  * 用户统一修订：书名与搜索采用共用常亮光标；点文字或箭头定位，按系统字体测量。
  * User-wide revision: title/search share a steady caret, text/arrow positioning and system-font measurement.
- * User revision: home, shelf, files and settings have four-tab navigation; view changes use GL16 and chapter starts have a title lead.
+ * User revision: add RSS as a reading entry to the five-tab home/shelf/RSS/files/settings bar; view changes use GL16 and chapter starts have a title lead.
  * User revision: EPUB chapter leads use navigation titles; body headings are folded only when matching, preventing front matter from being mislabeled.
  * User revision: the reader bar is rounded without protruding ticks; continue reading displays the latest cover.
  * User revision: the shelf retains its title layout, reads a complete cached page before painting, and reveals cold artwork only after the page is prepared.
@@ -5706,7 +5706,13 @@ static int control_at(app_ctx_t* ctx, uint16_t x, uint16_t y, EpdRect* rect) {
             if (ui_rect_hit(*rect, x, y)) return 701 + i;
         }
         int tab = ui_nav_hit(x, y);
-        if (tab >= 0) { *rect = (EpdRect){tab * 171, UI_NAV_TOP, 171, 120}; return 705 + tab; }
+        if (tab >= 0) {
+            int slot = x * UI_NAV_TAB_COUNT / UI_LOCK_WIDTH;
+            int left = (slot * UI_LOCK_WIDTH + UI_NAV_TAB_COUNT - 1) / UI_NAV_TAB_COUNT;
+            int right = ((slot + 1) * UI_LOCK_WIDTH + UI_NAV_TAB_COUNT - 1) / UI_NAV_TAB_COUNT;
+            *rect = (EpdRect){left, UI_NAV_TOP, right - left, 120};
+            return 705 + tab;
+        }
         return -1;
     }
     if (s_view == SEARCH) {
