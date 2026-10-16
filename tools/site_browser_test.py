@@ -39,6 +39,10 @@ def check(site: Path, screenshots: Path | None) -> None:
             page.wait_for_function(
                 "!document.getElementById('bin-download').hidden")
             assert page.locator("h1").count() == 1
+            assert page.locator(".masthead-note").inner_text() == "READ ALL"
+            assert page.locator(".closing-line p").inner_text() == "READ ALL"
+            assert "means" not in page.locator(".manifesto").inner_text()
+            assert "ALL ABOUT READING" not in page.locator("body").inner_text().upper()
             assert page.locator("#firmware-version").inner_text().startswith("0.")
             assert page.locator("#bin-download").get_attribute("download") == "readll-update.bin"
             assert page.locator("#flash-installer").get_attribute("manifest").endswith("/manifest.json")
@@ -69,17 +73,17 @@ def check(site: Path, screenshots: Path | None) -> None:
                     page.screenshot(path=str(screenshots / f"readll-{width}.png"), full_page=True)
 
             page.set_viewport_size({"width": 1440, "height": 1000})
-            page.locator("[data-ask-manual]").click()
-            assert page.locator(".manual-helper").is_visible()
-            page.keyboard.press("Escape")
-            assert not page.locator(".manual-helper").is_visible()
-            links = page.locator('a[href*="manual/#"]').evaluate_all(
-                "(nodes) => nodes.map(n => n.getAttribute('href'))")
-            manual_response = page.request.get(base + "/manual/")
-            assert manual_response.ok
-            manual = manual_response.text()
-            for link in links:
-                assert f'id="{link.split("#")[1]}"' in manual, f"missing manual anchor: {link}"
+            assert page.locator('.upstream-note a[href="https://kiikoread.com/"]').count() == 1
+            upstream_manual = page.locator('a[href="https://kiikoread.com/manual/"]')
+            assert upstream_manual.count() == 1
+            assert upstream_manual.get_attribute("target") == "_blank"
+            assert page.locator('a[href^="./manual"], script[src*="manual"], [data-ask-manual]').count() == 0
+            assert page.locator('a[href^="#"]').evaluate_all(
+                "(nodes) => nodes.every(n => document.getElementById(n.hash.slice(1)))")
+            page.locator("#notices summary").click()
+            assert page.locator("#notices").evaluate("(node) => node.open")
+            assert page.locator('#notices a[href="./LICENSE"]').is_visible()
+            page.locator("#notices summary").click()
             assert not errors, errors
 
             page.route("**/manifest.json", lambda route: route.fulfill(status=503, body="unavailable"))
@@ -105,7 +109,7 @@ def check(site: Path, screenshots: Path | None) -> None:
         server.shutdown()
         server.server_close()
         thread.join()
-    print("readll browser PASS: responsive layouts, previews, keyboard/dialog, manual, release, unavailable and unsupported-browser states")
+    print("readll browser PASS: responsive layouts, previews, keyboard/dialog, upstream attribution, inline notices, release, unavailable and unsupported-browser states")
 
 
 if __name__ == "__main__":

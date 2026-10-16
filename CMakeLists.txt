@@ -11,9 +11,28 @@ idf_build_set_property(MINIMAL_BUILD ON)
 if(DEFINED ENV{READLL_PROJECT_VER} AND NOT "$ENV{READLL_PROJECT_VER}" STREQUAL "")
     set(PROJECT_VER "$ENV{READLL_PROJECT_VER}")
 else()
-    set(PROJECT_VER "0.3.3-rc92")
+    set(PROJECT_VER "0.3.3-rc95")
 endif()
 project(readll)
+
+# 每次实际构建检查上游，不自动更改源码；离线跳过必须显式指定。
+# Check upstream on every build without changing sources; offline skipping is explicit.
+option(READLL_SKIP_UPSTREAM_CHECK "Explicitly skip the online upstream check" OFF)
+option(READLL_REQUIRE_CURRENT_UPSTREAM "Reject unreviewed upstream changes" OFF)
+if(READLL_SKIP_UPSTREAM_CHECK AND READLL_REQUIRE_CURRENT_UPSTREAM)
+    message(FATAL_ERROR "Required upstream review cannot be skipped")
+endif()
+if(NOT READLL_SKIP_UPSTREAM_CHECK)
+    set(upstream_check_args "")
+    if(READLL_REQUIRE_CURRENT_UPSTREAM)
+        list(APPEND upstream_check_args --require-current)
+    endif()
+    add_custom_target(readll_upstream_check ALL
+        COMMAND "${PYTHON}" "${CMAKE_SOURCE_DIR}/tools/check_upstream.py" ${upstream_check_args}
+        WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+        VERBATIM)
+    add_dependencies(${PROJECT_NAME}.elf readll_upstream_check)
+endif()
 
 # 固件描述时间统一为 UTC，与概览页标识一致；保留已有编译缓存启动器。
 # Compile app-description timestamps in UTC to match Overview; preserve any compiler-cache launcher.

@@ -27,12 +27,14 @@ jobs:
         shell: bash
         run: |
           . "$IDF_PATH/export.sh"
-          idf.py -B build/pages -D SDKCONFIG=build/pages/sdkconfig -D SDKCONFIG_DEFAULTS=sdkconfig.defaults set-target esp32s3
-          idf.py -B build/pages -D SDKCONFIG=build/pages/sdkconfig -D SDKCONFIG_DEFAULTS=sdkconfig.defaults build
+          idf.py -B build/pages -D SDKCONFIG=build/pages/sdkconfig -D SDKCONFIG_DEFAULTS=sdkconfig.defaults -D READLL_REQUIRE_CURRENT_UPSTREAM=ON set-target esp32s3
+          idf.py -B build/pages -D SDKCONFIG=build/pages/sdkconfig -D SDKCONFIG_DEFAULTS=sdkconfig.defaults -D READLL_REQUIRE_CURRENT_UPSTREAM=ON build
           python3 tools/package_flash.py build/pages build/pages-package
           python3 tools/stage_public_flash.py _site --package-dir build/pages-package
           python3 tools/verify_flash_bundle.py _site
           python3 -m unittest \
+            tools.test_check_upstream \
+            tools.rss_test.test_rss.StaticAndFixtureContractTests.test_single_page_site_contract \
             tools.rss_test.test_rss.StaticAndFixtureContractTests.test_pages_deployment_contract \
             tools.rss_test.test_rss.StaticAndFixtureContractTests.test_release_manifest_schemas_do_not_conflict \
             tools.rss_test.test_rss.StaticAndFixtureContractTests.test_usb_product_descriptor_uses_readll

@@ -119,3 +119,9 @@ esp_err_t read_pico_transfer_miniflux_clear(void);
 /// Copy credentials into caller buffers; unconfigured returns ESP_ERR_NOT_FOUND and callers must erase the token after use.
 esp_err_t read_pico_transfer_miniflux_get(char *base_url, size_t base_cap,
                                          char *api_token, size_t token_cap);
+
+/// 后台短时校准，可被手动联网或睡眠取消；不读取 TF 文件。
+/// Brief background calibration, cancellable by manual networking or sleep; no TF access.
+esp_err_t read_pico_transfer_sync_time_auto(uint32_t *utc_seconds);
+/// 主循环消费成功校准事件，用于 PMU/NVS 交接。/ Consume successful sync events on the main loop for PMU/NVS handoff.
+bool read_pico_transfer_take_time_sync(uint32_t *utc_seconds);

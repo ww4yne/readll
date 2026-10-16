@@ -11,12 +11,30 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: Water-turn, display recovery, navigation and waveform regressions
         shell: bash
         run: |
           bash tools/run_water_turn_host_test.sh
           bash tools/run_display_host_test.sh
           bash tools/run_display_navigation_tests.sh
+          python3 -m unittest tools.test_check_upstream
+          python3 tools/pmic_gate_host_test.py
+          python3 tools/vertical_punctuation_host_test.py
+          python3 tools/vertical_number_host_test.py
+          python3 tools/time_service_host_test.py
+          python3 tools/reader_idle_prefetch_host_test.py
+          python3 tools/reader_refresh_release_host_test.py
+          python3 tools/avatar_async_host_test.py
+          python3 tools/cover_jobs_host_test.py
+          python3 tools/reading_origin_host_test.py
+          python3 tools/shelf_guard_cache_host_test.py
+          python3 tools/packed_fill_host_test.py
+          python3 tools/settings_scroll_host_test.py
+          python3 tools/shelf_cover_batch_host_test.py
+          cc -std=c11 -D_DEFAULT_SOURCE -Wall -Wextra -Werror -g -fsanitize=address,undefined -fno-omit-frame-pointer -Imain/book -Imain -Itools/book_layout_stubs -Itools/book_source_host_stubs tools/book_layout_host_test.c main/book/book_layout.c main/book/html_text.c -o build/book-tests/layout
+          build/book-tests/layout
 
   build:
     runs-on: ubuntu-latest

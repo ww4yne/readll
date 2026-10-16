@@ -34,8 +34,11 @@ Keep local test bundles in ignored build directories. USB and TF package generat
 
 ### 正式版发布 / Official releases
 
-正式发布目标仓库将命名为 `readll`。发布流程尚未启用；启用后，TF 应用 Bin、完整 USB 刷机包、SHA-256 校验值和简要更新日志必须来自同一次正式构建。
-The official release repository will be named `readll`. Publishing is not enabled yet; once enabled, the TF application binary, complete USB flash bundle, SHA-256 checksums and concise release notes must come from the same official build.
+仓库为 `ww4yne/readll`，网页构建通过 Pages 发布到 `https://ww4yne.github.io/readll/`，不冒称正式发布；TF 应用 Bin、完整 USB 刷机包、SHA-256 校验值和简要更新日志必须来自同一次构建。
+The repository is `ww4yne/readll`; Pages publishes builds to `https://ww4yne.github.io/readll/` without labeling test builds as official releases. The TF application binary, complete USB bundle, SHA-256 checksums and concise notes must come from the same build.
+
+功能与交互跟随 kiikoread，readll 自行维护 RSS、身份、单页网站及设备联网 OTA 禁用边界。当前审查基线见 `tools/upstream.json`；每次构建检查远端变化但不合并，Pages 发布拒绝未审查变化。只有显式离线本机构建可使用 `READLL_SKIP_UPSTREAM_CHECK=ON`。
+Follow kiikoread functionality and interactions; maintain readll RSS, identity, single-page site and disabled device-side online OTA boundaries. Reviewed baselines live in `tools/upstream.json`; every build checks remote changes without merging, and Pages rejects unreviewed changes. Only explicit local offline builds may set `READLL_SKIP_UPSTREAM_CHECK=ON`.
 
 在配置并审核新的 OTA origin 前，仅设备内联网 OTA 必须显式禁用：UI 与调用路径返回“尚未配置”，不得请求任何旧站点或旧仓库，也不得静默回退。WebUSB 网页刷机、静态站 staging、完整 USB 包与 TF 本地升级必须继续可用；不要编造新域名。
 Until a new OTA origin is configured and reviewed, only device-side online OTA is disabled: the UI and call path report “not configured”, never request a legacy website or repository, and never silently fall back. WebUSB flashing, static-site staging, complete USB packages and local TF updates must remain available; do not invent a domain.
@@ -135,7 +138,7 @@ Defined in [`main/app/app.h`](main/app/app.h). The loop presents via `app_presen
 - `on_power_short()` 可选：页面可消费电源键短按；返回 `APP_REDRAW_NONE` 时主循环继续锁屏。阅读正文的“电源键翻页”开关开启后短按翻下一页，长按由主循环锁屏；其他页面保留原电源键逻辑。/ Optional short-power callback may consume the press; `APP_REDRAW_NONE` keeps the lock path. With reader power-turn enabled, short presses advance in the reader body and long presses lock; other pages keep their usual power behavior.
 - `on_media_ready()` 可选：首次无卡启动后插卡或显式重挂完成时通知当前页面更新目录；不要用它绕过拔卡后的句柄清理。/ Optional callback refreshes page listings after a first insertion or explicit remount; it must not bypass handle cleanup after removal.
 - `on_gesture()` 可选；提供后不再接收 `on_touch()`。主循环负责识别与全局中断取消，页面解释动作。/ Optional gesture callback replaces `on_touch`; the loop recognizes and cancels, the page interprets.
-- `on_key()` 默认只收 `UI_KEY_1`；`owns_keys` 页面在菜单关闭时接收三键。产品系统页按用户决定使用左返回、中首页、右返回；阅读正文三键短按可自定义，两套推荐默认上一页/工具栏/下一页；三键短按或中键长按至少保留一个工具栏入口；中键长按可自定义，默认返回首页，中间双击切全屏独立于按键及翻页模式；新开书默认全屏，翻页关闭工具栏并回全屏。/ Normally KEY1 only; `owns_keys` pages receive all three outside the menu. Product system pages use Back/Home/Back; reader short actions are configurable, defaulting to previous/tools/next; at least one short key or middle hold must open the toolbar; middle holds are configurable and default to home and center double taps toggle full screen independently of key/tap modes; new books open full screen and turns dismiss tools and return to full screen.
+- `on_key()` 默认只收 `UI_KEY_1`；`owns_keys` 页面在菜单关闭时接收三键。产品系统页使用左返回、中首页、右返回；阅读正文三键短按可自定义，默认上一页/工具栏/下一页；底边上滑始终打开工具栏，启动或恢复不再强制保留工具栏按键；中键长按可自定义，默认返回首页，返回动作遵循打开来源；中间双击切全屏独立于按键及翻页模式；新开书默认全屏，翻页关闭工具栏并回全屏。/ Normally KEY1 only; `owns_keys` pages receive all three outside the menu. Product system pages use Back/Home/Back; reader short actions default to previous/tools/next. A permanent bottom-edge upward gesture opens Tools, so boot/restore no longer force a Tools key. Middle hold defaults to Home; returns respect the opening origin. Center double taps toggle full screen independently of mappings; new books and page turns use full screen and turns dismiss Tools.
 
 标志：
 
@@ -169,6 +172,8 @@ Defined in [`main/app/app.h`](main/app/app.h). The loop presents via `app_presen
 注释里不要再展开这些词。/ Do not re-explain these terms in comments.
 
 ## 硬约束 / Hard rules
+
+- readll 官网只交付单页，注明设备界面沿用 kiikoread，基础操作链接至 `https://kiikoread.com/manual/`，不复制或发布本地手册、PDF 与手册搜索。来源署名不是品牌回退；WebUSB、TF 下载和必要许可仍保留。/ Ship a single-page readll site, credit the kiikoread device UI and link basic usage to `https://kiikoread.com/manual/` instead of hosting manuals, PDFs or manual search. Attribution does not revert the readll brand; preserve WebUSB, TF downloads and required licenses.
 
 - 用户 2026-10-14 确认本仓库的新固件与模拟器品牌为小写 `readll`；当前目录名只是迁移工作区，不是品牌。旧品牌技术标识必须迁移。硬件上游说明可引用 `wegooo-cell/read-pico-reader` 与 MindReset Read Pico/RDP-G01-W；`read_pico_*` BSP、API 和协议名保留，避免无意义重构。/ Per the user’s 2026-10-14 decision, the new firmware and simulator brand in this repository is lowercase `readll`; the current directory name is only a migration workspace, not a brand. Legacy brand identifiers must be migrated. Hardware provenance may reference `wegooo-cell/read-pico-reader` and MindReset Read Pico/RDP-G01-W; preserve `read_pico_*` BSP, API and protocol names to avoid meaningless refactors.
 

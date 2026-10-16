@@ -34,20 +34,28 @@ def stage(output: Path, package_dir: Path | None = None) -> None:
     package_dir = package_dir or (FLASH if (FLASH / "firmware.bin").is_file() else ROOT / "build/readll-package")
     if not (package_dir / "firmware.bin").is_file():
         raise FileNotFoundError("readll package not found; run tools/package_flash.py first or pass --package-dir")
+    if output.resolve() in (ROOT, FLASH):
+        raise ValueError("Site output must not overwrite repository or website sources")
     output.mkdir(parents=True, exist_ok=True)
-    for name in ("index.html", "notices.html", "manual.html", "site.css", "site.js", "installer-bridge.js",
-                 "versions.js", "toc-preview.png"):
+    # 清理旧站生成的手册与资源，重复 staging 仍只交付单页。
+    # Remove generated legacy manuals and assets so repeated staging stays single-page.
+    for name in ("manual", "assets", "manual.html", "notices.html", "toc-preview.png"):
+        target = output / name
+        if target.is_dir():
+            shutil.rmtree(target)
+        elif target.exists():
+            target.unlink()
+    for name in ("index.html", "site.css", "site.js", "installer-bridge.js", "versions.js"):
         if (FLASH / name).is_file(): shutil.copy2(FLASH / name, output / name)
     for name in ("manifest.json", "firmware.bin", "bootloader.bin", "partitions.bin",
                  "ota_data_initial.bin", "readll-update.bin", "update.json",
                  "release-assets.json", "SHA256SUMS.txt"):
         shutil.copy2(package_dir / name, output / name)
-    # 官网仅发布展示资源与用户说明；内部构建及调试记录不进入网站。
-    # Publish website assets and the user manual, excluding private build and debug files.
-    shutil.copytree(FLASH / "assets", output / "assets", dirs_exist_ok=True)
-    # 中文：只复制仓库中的公开说明书（正文、检索索引、图解、PDF）。
-    # English: Copy the curated public manual, never its local rendering/debug workspace.
-    shutil.copytree(FLASH / "manual", output / "manual", dirs_exist_ok=True)
+    for name in ("screens/reader.png", "screens/shelf-acrylic.png", "screens/home.png",
+                 "icons/book-open.svg", "icons/library-big.svg"):
+        target = output / "assets" / name
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(FLASH / "assets" / name, target)
     version = json.loads((package_dir / "manifest.json").read_text(encoding="utf-8"))["version"]
     versioned = package_dir / f"readll-update-{version}.bin"
     if versioned.is_file(): shutil.copy2(versioned, output / versioned.name)
@@ -82,7 +90,9 @@ def stage(output: Path, package_dir: Path | None = None) -> None:
     shutil.copy2(ROOT / "LICENSE", output / "LICENSE")
     (output / ".nojekyll").touch()
 
-    for page in ("index.html", "notices.html", "manual.html", "manual/index.html"):
+    assert {path.relative_to(output).as_posix() for path in output.rglob("*.html")} == {"index.html"}, (
+        "Public site must contain only the single index.html page")
+    for page in ("index.html",):
         links = LocalLinks()
         links.feed((output / page).read_text(encoding="utf-8"))
         for link in links.links:

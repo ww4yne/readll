@@ -293,8 +293,7 @@ class StaticAndFixtureContractTests(unittest.TestCase):
         self.assertIn("hydrate(FLASH, output)", stage)
         self.assertIn('"SHA256SUMS.txt"', stage)
         legacy_brand = "".join(chr(code) for code in (107, 105, 105, 107, 111))
-        forbidden = (legacy_brand + "read", legacy_brand + " read",
-                     legacy_brand + "-read", "read-pico-" + "rss")
+        forbidden = (legacy_brand + " read", legacy_brand + "-read", "read-pico-" + "rss")
         roots = [ROOT / name for name in ("README.md", "README.zh-CN.md", "README.ja-JP.md", "AGENTS.md")]
         roots += list((ROOT / "docs").glob("*.md"))
         roots += list((ROOT / "flash").glob("*.html"))
@@ -302,6 +301,27 @@ class StaticAndFixtureContractTests(unittest.TestCase):
             text = path.read_text(encoding="utf-8").lower()
             for value in forbidden:
                 self.assertNotIn(value, text, f"{value} remains in {path.relative_to(ROOT)}")
+            self.assertNotRegex(text, rf"(?m)^#\s+{legacy_brand}read(?:\s|$)")
+        self.assertIn("<title>readll", web)
+
+    def test_single_page_site_contract(self) -> None:
+        web = (ROOT / "flash/index.html").read_text(encoding="utf-8")
+        links = re.findall(r'(?:href|src|manifest)="([^"]+)"', web)
+        self.assertIn("https://kiikoread.com/", links)
+        self.assertIn("https://kiikoread.com/manual/", links)
+        self.assertIn('class="upstream-note"', web)
+        self.assertIn('<span class="masthead-note">READ ALL</span>', web)
+        self.assertNotIn("ALL ABOUT READING", web.upper())
+        self.assertNotIn("means", web)
+        self.assertIn('<details class="license-notes" id="notices">', web)
+        for link in links:
+            parsed = urllib.parse.urlparse(link)
+            if parsed.scheme or parsed.netloc:
+                continue
+            self.assertNotIn("manual", parsed.path)
+            self.assertNotIn("notices.html", parsed.path)
+        self.assertNotIn("data-ask-manual", web)
+        self.assertNotIn("manual-helper", web)
 
     def test_pages_deployment_contract(self) -> None:
         workflow = (ROOT / ".github/workflows/pages.yml").read_text(encoding="utf-8")

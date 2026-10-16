@@ -19,6 +19,8 @@
  * 冻结：沿用实际后缓冲，不把圆锁当白色；不增加帧副本，自动休眠/其他样式/失败回退保留原流程。
  * Frozen: Retain true history including the badge, add no frame copy and preserve idle/other-style/failure recovery.
  */
+#include "ui_avatar.h"
+#include "book_cover_jobs.h"
 
 #include "sleep.h"
 #include "boot_state.h"
@@ -210,6 +212,7 @@ static bool pickup_wait_quiet(sc7a20h_handle_t acc, int quiet_ms, int timeout_ms
 }
 
 app_wake_source_t app_light_sleep_wait_timed(sc7a20h_handle_t acc, uint32_t timeout_ms) {
+    if (!(book_cover_jobs_quiesce(2000) && ui_avatar_quiesce(2000))) return APP_WAKE_KEY;
     bool pickup = acc != NULL && app_settings_pickup_wake();
     bool acc_armed = false;
     const int64_t deadline_us = timeout_ms
@@ -383,7 +386,7 @@ esp_err_t app_enter_host_sleep(app_sleep_mode_t mode) {
     if (mode != APP_SLEEP_OFF && mode != APP_SLEEP_DEEP) return ESP_ERR_INVALID_ARG;
     // 产品页用 on_before_lock 保存并收齐后台；保留阅读内存以便交接失败仍可回到原页。
     // Product pages checkpoint/join in on_before_lock; retain reader state so a failed handoff can resume the same page.
-    if (readll_online_busy() || !read_pico_transfer_pause_for_sleep()) return ESP_ERR_INVALID_STATE;
+    if (readll_online_busy() || !(book_cover_jobs_quiesce(2000) && ui_avatar_quiesce(2000)) || !read_pico_transfer_pause_for_sleep()) return ESP_ERR_INVALID_STATE;
     (void)ble_pt_stop(2000);
     (void)app_sync_time_to_pmu();
     // 必须先断面板轨，再拉低 MODE，避免常开逻辑仍耗电。/ Drop panel rails before parking MODE on the always-on supply.
@@ -441,6 +444,7 @@ void enter_lock_and_sleep(
     EpdiyHighlevelState* hl, int64_t* ignore_until_ms, sc7a20h_handle_t acc, cst836u_handle_t touch,
     bool reader_background
 ) {
+    if (read_pico_buzzer_score_busy()) (void)read_pico_buzzer_score_stop();
     bool feedback_visible = s_lock_feedback_visible;
     s_lock_feedback_visible = false;
     // Refuse to interrupt an active upload. The caller repaints its page when

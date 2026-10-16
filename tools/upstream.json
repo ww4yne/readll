@@ -1,0 +1,15 @@
+{
+  "schema": 1,
+  "sources": [
+    {
+      "repository": "wegooo-cell/read-pico-reader",
+      "branch": "main",
+      "reviewed_commit": "d8eae1bf4b62e8072feb0052ba603abcac9eaa82"
+    },
+    {
+      "repository": "MindReset/read_pico_firmware",
+      "branch": "main",
+      "reviewed_commit": "6a247cc94420b85c650b32a6b2c063a360070eee"
+    }
+  ]
+}

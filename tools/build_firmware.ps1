@@ -2,7 +2,8 @@
 # English: Build in an activated ESP-IDF v6.1 shell, isolating CI/board configs without flashing.
 param(
     [ValidateSet('ci', 'board')]
-    [string]$Profile = 'ci'
+    [string]$Profile = 'ci',
+    [switch]$SkipUpstreamCheck
 )
 
 $ErrorActionPreference = 'Stop'
@@ -17,10 +18,12 @@ Write-Host $version
 
 $build = Join-Path $repo "build\$Profile"
 $defaults = if ($Profile -eq 'ci') { 'sdkconfig.ci' } else { 'sdkconfig.defaults' }
+$skipCheck = if ($SkipUpstreamCheck) { 'ON' } else { 'OFF' }
 Push-Location $repo
 try {
     & $idf -B $build "-DSDKCONFIG=$(Join-Path $build 'sdkconfig')" `
-        "-DSDKCONFIG_DEFAULTS=$(Join-Path $repo $defaults)" -DIDF_TARGET=esp32s3 build size
+        "-DSDKCONFIG_DEFAULTS=$(Join-Path $repo $defaults)" `
+        "-DREADLL_SKIP_UPSTREAM_CHECK=$skipCheck" -DIDF_TARGET=esp32s3 build size
     if ($LASTEXITCODE -ne 0) { throw "Firmware $Profile build failed (exit $LASTEXITCODE)." }
 }
 finally {

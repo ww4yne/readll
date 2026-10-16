@@ -343,6 +343,10 @@ typedef struct {bool network_ready;int mode;} read_pico_transfer_status_t;
 static pmu_snapshot_t pmu;
 static int pct;
 static bool wifi,bluetooth,s_system_ttf;
+#define TTF_FONT_PATH_MAX 160
+static bool chosen_system,reading_context;
+static const char *app_settings_system_font_path(void){return chosen_system?"system.ttf":"";}
+static const char *ttf_font_path(void){return reading_context?"reader.ttf":chosen_system?"system.ttf":"builtin";}
 static bool ttf_font_is_builtin(void){return false;}
 static char signature[96];
 static const pmu_snapshot_t *read_pico_pmu_get(void){return &pmu;}
@@ -377,14 +381,18 @@ status += defines + "\n"
 for path, name in (("main/ui/ui_kit.c", "ui_text_fixed_context_width_px"),
                    ("main/ui/ui_kit.c", "ui_text_fixed_width_px"),
                    ("main/ui/ui_kit.c", "ui_text_fixed_context_vc"),
-                   ("main/ui/ui_kit.c", "ui_text_fixed_vc"), ("main/ui/ui_nav.c", "status_time"), ("main/ui/ui_nav.c", "clock_text"), ("main/ui/ui_nav.c", "ui_nav_status")):
+                   ("main/ui/ui_kit.c", "ui_text_fixed_vc")):
     status += function(path, name) + "\n"
+status += nav[nav.index('static bool s_status_reading;'):nav.index('static const char *const labels[]')]
+for name in ('status_time','clock_text','ui_nav_status'):
+    status += function('main/ui/ui_nav.c',name) + '\n'
 status += r'''
 int main(void){
  uint8_t fb=0;const int percentages[]={0,9,78,100,-1};
  for(int font=0;font<2;++font)for(int mask=0;mask<4;++mask)for(unsigned p=0;p<5;++p){
-   s_system_ttf=font;wifi=mask&1;bluetooth=mask&2;pct=percentages[p];text_count=0;network_left=1000;
+   reading_context=false;chosen_system=s_system_ttf=font;wifi=mask&1;bluetooth=mask&2;pct=percentages[p];text_count=0;network_left=1000;
    snprintf(signature,sizeof(signature),"时间统一 · 正在阅读我的收藏书籍，保持热爱 ABCabc");
+   ui_nav_status_font_context(false,true);
    ui_nav_status(&fb);assert(text_count==3&&texts[0].px==28&&texts[1].px==26&&texts[2].px==28);
    for(int i=0;i<3;++i)assert(texts[i].center>=39&&texts[i].center<=41);
    assert(texts[0].right+12<=texts[1].left);
@@ -392,7 +400,15 @@ int main(void){
    assert(texts[2].right==595&&texts[1].align==EPD_DRAW_ALIGN_CENTER);
    assert(texts[1].left+texts[1].right>=683&&texts[1].left+texts[1].right<=685);
    size_t length=strlen(texts[1].text);assert(length&&((unsigned char)texts[1].text[length-1]&0xc0)!=0xc0);
+   char system_prefix[96];snprintf(system_prefix,sizeof(system_prefix),"%s",texts[1].text);
+   int system_network_left=network_left;
+   // 阅读字体变化不重算系统签名宽度；不同字体仍显示同一UTF8前缀并保持图标间距。
+   // Reader face changes do not recompute system signature widths: retain the same UTF8 prefix and icon spacing.
+   reading_context=true;s_system_ttf=false;ui_nav_status_font_context(true,true);text_count=0;network_left=1000;
+   ui_nav_status(&fb);assert(text_count==3&&!strcmp(texts[1].text,system_prefix)&&network_left==system_network_left);
+   assert(texts[0].right+12<=texts[1].left&&texts[1].right+12<=(mask?network_left:texts[2].left));
  }
+ reading_context=false;ui_nav_status_font_context(false,false);
  signature[0]=0;text_count=0;ui_nav_status(&fb);assert(text_count==2);
  puts("PASS: larger status text shares the icon centerline with builtin/custom metrics; simultaneous radios, 100% and long UTF-8 signatures do not overlap");
 }
@@ -432,15 +448,23 @@ static void epd_fill_rect(EpdRect area,int gray,uint8_t *fb){
 static void ui_hairline(uint8_t *fb,int y,int x,int width,int gray){(void)fb;(void)x;(void)width;(void)gray;assert(y==UI_NAV_TOP);}
 static void ui_text(uint8_t *fb,int x,int y,int px,const char *label,int align,bool wrap){(void)fb;(void)x;(void)label;(void)align;(void)wrap;assert(y==UI_NAV_TOP+74&&px==17);++texts;}
 '''
+navigation += 'static void ui_fill_rect_fast(EpdRect r,uint8_t gray,uint8_t *fb){epd_fill_rect(r,gray,fb);}'
 for path, name in (("main/ui/ui_kit.c", "icon_nibble"), ("main/ui/ui_kit.c", "ui_draw_icon"),
-                   ("main/ui/ui_nav.c", "icon"), ("main/ui/ui_nav.c", "ui_nav_draw")):
+                   ("main/ui/ui_nav.c", "icon"), ("main/ui/ui_nav.c", "ui_nav_draw"), ("main/ui/ui_nav.c", "ui_nav_hit")):
     navigation += function(path, name) + "\n"
 navigation += r'''
 int main(void){
  uint8_t fb=0;
+ for(int x=0;x<684;++x){
+   assert(ui_nav_hit(x,UI_NAV_TOUCH_TOP-1)==-1);
+   for(int y=UI_NAV_TOUCH_TOP;y<1216;++y)assert(ui_nav_hit(x,y)==x/171);
+   assert(ui_nav_hit(x,1216)==-1);
+ }
+ assert(ui_nav_hit(684,1141)==-1&&ui_nav_hit(UINT16_MAX,1141)==-1);
+ assert(UI_NAV_TOUCH_TOP==1080&&UI_NAV_TOP==1096&&UI_NAV_REFRESH_END==1088);
  for(main_choice=0;main_choice<3;++main_choice)for(int active=0;active<4;++active){
    first_ink=2000;markers=tracks=texts=guards=0;ui_nav_draw(&fb,active);
-   assert(markers==1&&texts==4&&tracks==(main_choice!=0)&&guards==(main_choice!=0));
+   assert(markers==1&&texts==4&&tracks==(main_choice!=0)&&guards==1);
    // 验证真实图标掩模的第一笔，单次刷新32列对齐后不能触碰图标。
    // Check actual mask ink: the 32-column-expanded single update must not reach an icon.
    assert(first_ink>=UI_NAV_MARKER_SCAN_END);

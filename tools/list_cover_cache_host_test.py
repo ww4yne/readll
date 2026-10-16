@@ -42,7 +42,7 @@ static bool book_image_dimensions(const uint8_t *data,size_t bytes,bool png,unsi
 static bool book_image_grayscale(const uint8_t *data,size_t bytes,bool png,unsigned w,unsigned h,uint8_t *out){(void)png;assert(data&&bytes==1&&w&&h&&w<=176&&h<=240);++decoded;if(decode_fail)return false;memset(out,61,w*h);return true;}
 static bool book_auto_cover_render(const char *p,const char *t,const char *a,unsigned w,unsigned h,uint8_t *out){(void)p;(void)t;(void)a;assert(w==176&&h==240);memset(out,191,w*h);return true;}
 '''
-for name in ('cover_hash', 'cover_cache_key', 'book_cover_load_list_gray'):
+for name in ('cover_hash', 'cover_cache_key', 'book_cover_load_list_gray_impl', 'book_cover_load_list_gray'):
     unit += function(name, source) + '\n'
 unit += r'''
 int main(int argc,char **argv){
@@ -66,7 +66,7 @@ int main(int argc,char **argv){
  puts("PASS: uncropped wide/tall/square covers, exact cache dimensions, 30 warm reads, corrupt metadata, 1.5MiB reserve, OOM/decode failure retry and generated fallback bounds");
 }
 '''
-with tempfile.TemporaryDirectory(prefix='plc-', dir='/private/tmp') as folder:
+with tempfile.TemporaryDirectory(prefix='plc-', dir=ROOT / 'build') as folder:
     p = Path(folder)
     unit = unit.replace('/sdcard/.readpico', str(p/'card'))
     (p/'test.c').write_text(unit)

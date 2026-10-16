@@ -1,6 +1,6 @@
 {
   "name": "readll",
-  "version": "0.3.3-rc92",
+  "version": "0.3.3-rc95",
   "new_install_prompt_erase": true,
   "readll_delivery": {
     "webusb_enabled": true,
@@ -32,7 +32,7 @@
   ],
   "readll_ota": {
     "layout": "readll-dual-4m-v1",
-    "base_version": "0.3.3-rc92",
+    "base_version": "0.3.3-rc95",
     "rollback": true,
     "online_enabled": false
   },

@@ -4,14 +4,11 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="theme-color" content="#f5f3eb">
-  <meta name="description" content="readll — read all. 为 RDP-G01-W 墨水屏设计的独立阅读固件。EPUB、TXT、Miniflux RSS，一个留给阅读的地方。">
-  <title>readll — read all.</title>
+  <meta name="description" content="readll — READ ALL。为 RDP-G01-W 墨水屏设计的独立阅读固件。EPUB、TXT、Miniflux RSS，一个留给阅读的地方。">
+  <title>readll — READ ALL</title>
   <link rel="stylesheet" href="./site.css">
-  <link rel="stylesheet" href="./assets/manual-helper.css">
   <script src="./installer-bridge.js"></script>
   <script src="./site.js" defer></script>
-  <script src="./assets/manual-search.js" defer></script>
-  <script src="./assets/manual-helper.js" data-index="./manual/manual-index.json" data-manual="./manual/" defer></script>
   <script type="module" src="./vendor/web/install-button.js"></script>
   <script src="./versions.js" defer></script>
 </head>
@@ -19,9 +16,9 @@
 <a class="skip" href="#main">跳到正文</a>
 <header class="masthead">
   <a class="brand" href="./" aria-label="readll 首页">readll<span class="brand-mark" aria-hidden="true">↗</span></a>
-  <span class="masthead-note">READ ALL. / ALL ABOUT READING.</span>
+  <span class="masthead-note">READ ALL</span>
   <nav aria-label="主导航">
-    <a href="#reading">阅读</a><a href="#preview">界面</a><a href="./manual/">说明书</a>
+    <a href="#reading">阅读</a><a href="#preview">界面</a>
     <a class="nav-install" href="#flash-action">安装 readll <span aria-hidden="true">↗</span></a>
   </nav>
 </header>
@@ -51,7 +48,7 @@
     </div>
   </section>
 
-  <div class="manifesto page-width"><p><strong>readll</strong> means <em>read all.</em></p><span>书与文章，都有自己的位置。</span></div>
+  <div class="manifesto page-width"><p><em>READ ALL</em></p><span>书与文章，都有自己的位置。</span></div>
 
   <section class="reading-section page-width" id="reading" aria-labelledby="reading-title">
     <div class="section-heading"><p class="kicker">01 / TWO WAYS IN</p><h2 id="reading-title">读得长，也读得短。</h2><p>不替你挑内容。把你选好的，读舒服。</p></div>
@@ -60,17 +57,13 @@
         <div class="path-top"><span class="path-index">A</span><span>YOUR LIBRARY</span><img src="./assets/icons/book-open.svg" alt="" width="28" height="28"></div>
         <h3>把书带在身边。</h3>
         <p>EPUB 与 TXT，存在自己的 TF 卡。封面、目录、书签和逐书进度，把长篇阅读接起来。</p>
-        <div class="path-detail"><span>导入</span><p>WiFi、设备热点或 USB，选一个方便的入口。</p></div>
-        <div class="path-detail"><span>续读</span><p>回到上次那一页，字体与排版按自己的习惯来。</p></div>
-        <a class="inline-link" href="./manual/#shelf">认识你的书架 <span aria-hidden="true">↗</span></a>
+        <p class="path-note">通过 WiFi、设备热点或 USB 导入，接着上次读到的地方。</p>
       </article>
       <article class="reading-path rss-path">
         <div class="path-top"><span class="path-index">B</span><span>YOUR SUBSCRIPTIONS</span><img src="./assets/icons/library-big.svg" alt="" width="28" height="28"></div>
         <h3>文章，挑着读。</h3>
         <p>连接自己的 Miniflux。每页 12 条标题，先浏览，再决定展开哪一篇；不为略过的文章建立正文缓存。</p>
-        <div class="path-detail"><span>略过</span><p>打开一篇，同时将当前页上方条目标为已读；也能一键清掉本页。</p></div>
-        <div class="path-detail"><span>展开</span><p>联网获取所选正文，只留在本次阅读内存中。已读状态同步回 Miniflux。</p></div>
-        <p class="path-note">离线可浏览已保存的标题、排队标记已读；打开正文需要联网。</p>
+        <p class="path-note">离线可浏览标题；正文联网打开、只留在本次阅读内存中，已读状态同步回 Miniflux。</p>
         <a class="inline-link" href="https://github.com/ww4yne/readll/blob/main/docs/RSS.md">Miniflux 配置与同步说明 <span aria-hidden="true">↗</span></a>
       </article>
     </div>
@@ -78,13 +71,13 @@
 
   <section class="preview-section" id="preview" aria-labelledby="preview-title">
     <div class="page-width preview-grid">
-      <div class="preview-copy"><p class="kicker">02 / ON THE SCREEN</p><h2 id="preview-title">文字是主角。<br>界面，退后一点。</h2><p>不把所有选项摆在眼前。<br>书架、正文、首页，各自做好一件事。</p>
+      <div class="preview-copy"><p class="kicker">02 / ON THE SCREEN</p><h2 id="preview-title">熟悉的界面，<br>继续读。</h2><p class="upstream-note">readll 的设备界面沿用 <a href="https://kiikoread.com/" target="_blank" rel="noopener">kiikoread</a>。基础操作与详细说明，请参考 <a href="https://kiikoread.com/manual/" target="_blank" rel="noopener">kiikoread 使用说明 ↗</a>。</p>
         <div class="preview-choices" role="tablist" aria-label="设备界面" aria-orientation="vertical">
           <button id="view-shelf" type="button" role="tab" data-view="shelf" aria-selected="true" aria-controls="preview-panel">01 <span>自己的书架</span><span aria-hidden="true">↗</span></button>
           <button id="view-reader" type="button" role="tab" data-view="reader" aria-selected="false" aria-controls="preview-panel" tabindex="-1">02 <span>专心读正文</span><span aria-hidden="true">↗</span></button>
           <button id="view-home" type="button" role="tab" data-view="home" aria-selected="false" aria-controls="preview-panel" tabindex="-1">03 <span>接着上次读</span><span aria-hidden="true">↗</span></button>
         </div>
-        <p class="preview-disclaimer">设备界面预览；书籍不随固件分发。刷新效果以实机为准。</p>
+        <p class="preview-disclaimer">设备界面预览；书籍不随固件分发。RSS 与升级规则以 readll 说明为准，刷新效果以实机为准。</p>
       </div>
       <figure class="device-preview" id="preview-panel" role="tabpanel" aria-labelledby="view-shelf">
         <button id="preview-zoom" type="button" aria-label="放大书架界面"><img id="preview-image" src="./assets/screens/shelf-acrylic.png" width="684" height="1216" loading="lazy" alt="readll 亚克力书架界面"><span class="zoom-hint">查看大图 ↗</span></button>
@@ -93,17 +86,8 @@
     </div>
   </section>
 
-  <section class="details-section page-width" aria-labelledby="details-title">
-    <div class="section-heading"><p class="kicker">03 / MAKE ROOM FOR YOUR HABITS</p><h2 id="details-title">读法，自己决定。</h2></div>
-    <div class="detail-grid">
-      <article><span>01</span><h3>字与留白</h3><p>自己的字体，自己的字号、行距、页边距与首行缩进。系统与书籍阅读字体分别设置。</p></article>
-      <article><span>02</span><h3>手指与按键</h3><p>轻点、滑动、蓝牙翻页器。三键与中键长按可自定义，保留随时打开工具栏的入口。</p></article>
-      <article><span>03</span><h3>墨水与刷新</h3><p>普通、快刷、水波纹。选择合适的刷新方式，调整阅读全刷间隔，也可手动清理残影。</p></article>
-    </div>
-  </section>
-
   <section class="install-section page-width" id="flash-action" aria-labelledby="install-title">
-    <div class="section-heading install-heading"><div><p class="kicker">04 / A NEW CHAPTER</p><h2 id="install-title">下一页，从安装开始。</h2></div><p>先确认设备是 RDP-G01-W。<br>刷机前，备份自己的设置与文件。</p></div>
+    <div class="section-heading install-heading"><div><p class="kicker">03 / A NEW CHAPTER</p><h2 id="install-title">下一页，从安装开始。</h2></div><p>先确认设备是 RDP-G01-W。<br>刷机前，备份自己的设置与文件。</p></div>
     <div class="release-strip">
       <div class="select-wrap"><label for="firmware-choice">固件构建</label><select id="firmware-choice" disabled><option value="./manifest.json">当前 readll 构建 · 读取中</option></select></div>
       <dl class="release-meta"><div><dt>版本</dt><dd id="firmware-version">读取中…</dd></div><div><dt>构建时间 / 北京时间</dt><dd><time id="firmware-updated">读取中…</time></dd></div></dl>
@@ -113,23 +97,32 @@
       <article class="install-method"><p class="kicker">01 / FIRST INSTALL</p><h3>一根线，装好。</h3><p>电脑 Chrome 或 Edge，HTTPS 页面，USB 数据线。完整写入启动程序、分区表、应用与 OTA 初始数据。</p>
         <div class="install-action"><esp-web-install-button id="flash-installer" hidden manifest="./manifest.json"><button slot="activate" class="button primary" type="button">连接设备，开始安装 ↗</button></esp-web-install-button><div id="flash-help" role="status"><strong id="flash-help-title">正在加载刷机按钮…</strong><p>需要支持 Web Serial 的桌面浏览器与 HTTPS（或 localhost）。</p></div></div>
         <p class="installation-caution">保留数据时，不要勾选「擦除设备」。连接失败，可先在设备「设置 → 升级和恢复 → BOOT 刷机」进入下载模式。</p>
-        <a class="inline-link" href="./manual/#first-use">安装步骤 <span aria-hidden="true">↗</span></a>
       </article>
       <article class="install-method"><p class="kicker">02 / ALREADY ON READLL</p><h3>一张卡，接着用。</h3><p>已完整安装 readll 双分区基础包？将应用 Bin 放到 TF 卡根目录，从设备「升级和恢复」发起本地升级。</p>
         <div class="install-action"><a id="bin-download" class="button secondary" hidden download="readll-update.bin">下载 TF 升级 Bin ↓</a></div>
         <p class="installation-caution">文件名保持 <code>readll-update.bin</code>。旧项目包不兼容；应用 Bin 不能刷到地址 0，也不能替代首次完整安装。</p>
-        <a class="inline-link" href="./manual/#update">升级步骤 <span aria-hidden="true">↗</span></a>
       </article>
     </div>
     <div class="build-notes" aria-live="polite"><h3 id="release-notes-title">构建说明</h3><ul id="release-notes-list"><li>正在读取构建说明…</li></ul></div>
     <p class="integrity-links"><a href="./SHA256SUMS.txt">SHA-256 校验值 ↗</a><a href="./release-assets.json">构建资产清单 ↗</a></p>
   </section>
 
-  <section class="help-section page-width" aria-labelledby="help-title"><p class="kicker">05 / KEEP THIS PAGE FOLDED</p><div class="help-heading"><h2 id="help-title">不必一次学会。</h2><p>传第一本书、调字体，或者只是找回一个设置。<br>需要时，再翻说明书。</p></div><div class="help-links"><a href="./manual/">打开图文说明书 <span aria-hidden="true">↗</span></a><a href="./manual/readll-manual.pdf" download>留一份 PDF <span aria-hidden="true">↓</span></a><button type="button" data-ask-manual>搜一个操作 <span aria-hidden="true">↗</span></button></div></section>
 </main>
 <footer class="colophon page-width">
-  <div class="closing-line"><a class="brand" href="./">readll<span class="brand-mark" aria-hidden="true">↗</span></a><p>read all.<br><span>All about reading.</span></p></div>
-  <div class="footer-links"><a href="https://github.com/ww4yne/readll" target="_blank" rel="noopener">源代码 ↗</a><a href="./notices.html">许可与致谢</a><a href="https://github.com/wegooo-cell/read-pico-reader" target="_blank" rel="noopener">硬件上游 ↗</a></div>
+  <div class="closing-line"><a class="brand" href="./">readll<span class="brand-mark" aria-hidden="true">↗</span></a><p>READ ALL</p></div>
+  <div class="footer-links"><a href="https://github.com/ww4yne/readll" target="_blank" rel="noopener">源代码 ↗</a><a href="https://kiikoread.com/" target="_blank" rel="noopener">界面上游 · kiikoread ↗</a><a href="https://dot.mindreset.tech/docs/read_0" target="_blank" rel="noopener">硬件文档 ↗</a></div>
+  <details class="license-notes" id="notices">
+    <summary>许可与致谢</summary>
+    <p>readll 是独立固件，保留各上游版权与许可。以下许可分别适用于对应材料，不代表整个固件采用同一种许可。</p>
+    <ul>
+      <li>MindReset 固件基础：<a href="./LICENSE">Apache-2.0</a>；Lucide 图标：<a href="./licenses/LUCIDE-ISC.txt">ISC</a>。</li>
+      <li>epdiy 显示驱动：LGPL-3.0-or-later（<a href="./licenses/LGPL-3.0.txt">LGPLv3</a>、<a href="./licenses/GPL-3.0.txt">GPLv3</a>）。</li>
+      <li>pypinyin 字典：<a href="./licenses/PYPINYIN-MIT.txt">MIT</a>；内建 Noto 字体子集：<a href="./licenses/OFL-Noto.txt">SIL OFL 1.1</a>。</li>
+      <li>CrossMux 适配参考：<a href="./licenses/CROSSMUX-MIT.txt">MIT</a>；FreeInk SDK 波形参考：<a href="./licenses/FREEINK-SDK-MIT.txt">MIT</a>。</li>
+      <li>JPEGDEC：<a href="./licenses/JPEGDEC-APACHE-2.0.txt">Apache-2.0</a>；ESP Web Tools：<a href="./vendor/LICENSE">Apache-2.0</a>。</li>
+    </ul>
+    <a href="https://github.com/ww4yne/readll/blob/main/THIRD_PARTY_NOTICES.md" target="_blank" rel="noopener">完整第三方声明与来源 ↗</a>
+  </details>
   <p class="provenance">独立设计的 readll 网站 · 固件基于 MindReset 开源硬件支持与驱动，非 MindReset 官方发布。<span>© 2026 readll</span></p>
 </footer>
 <dialog id="preview-dialog" aria-labelledby="preview-dialog-title"><div class="dialog-heading"><h2 id="preview-dialog-title">设备界面</h2><button id="preview-close" type="button" aria-label="关闭界面预览">关闭 ×</button></div><img id="preview-full" alt="放大的设备界面"></dialog>

@@ -32,6 +32,8 @@ static bool locked,aa=true,raster_aa=true,save_fail;
 static void lock_draw(void){assert(!locked);locked=true;}
 static void unlock_draw(void){assert(locked);locked=false;}
 static bool app_settings_book_antialias(void){return aa;}
+static bool vertical_book;
+static bool app_settings_book_vertical(void){return vertical_book;}
 static bool app_settings_set_book_antialias(bool on){assert(locked);if(save_fail)return false;aa=on;return true;}
 static void ttf_set_antialias(bool on){assert(locked);raster_aa=on;}
 static bool ui_rect_hit(EpdRect r,int x,int y){return x>=r.x&&x<r.x+r.width&&y>=r.y&&y<r.y+r.height;}

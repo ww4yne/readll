@@ -4,9 +4,12 @@
 [中文说明](README.zh-CN.md) · [日本語](README.ja-JP.md) ·
 [Third-party notices](THIRD_PARTY_NOTICES.md)
 
-**readll means “read all” — all about reading.** Its independently designed
-website brings books and articles together, with device previews, installation,
-downloads and documentation; it is not a renamed upstream landing page.
+**READ ALL** — the readll slogan. Its independently designed
+single-page website brings books and articles together, with device previews,
+installation and downloads. The device UI comes from
+[kiikoread](https://kiikoread.com/); refer to its
+[manual](https://kiikoread.com/manual/) for basic operation rather than a copied
+manual on this site. readll-specific RSS and update behavior is documented here.
 
 `readll` is independent firmware for EPUB/TXT books, fast Miniflux unread-list
 review and synchronized read state. It is based on the
@@ -15,7 +18,7 @@ MindReset driver fixes by review rather than replacing product modules.
 RSS setup, compatibility, metadata storage and synchronization behavior are
 documented in [docs/RSS.md](docs/RSS.md).
 
-The project, firmware UI, simulator, website, build project and package names use lowercase **readll**. `tools/package_flash.py` produces the complete USB/WebUSB parts and TF image from one build; `tools/stage_public_flash.py` creates a self-contained site for any HTTPS static host. Device-side online OTA alone is disabled until a new readll OTA origin is configured, with no legacy request or fallback. The PDF can be regenerated from `docs/user-manual.zh-CN.json` with `tools/build_user_manual.py --font /path/to/a/static-CJK.ttf` (Python ReportLab required).
+The project, firmware UI, simulator, website, build project and package names use lowercase **readll**. `tools/package_flash.py` produces the complete USB/WebUSB parts and TF image from one build; `tools/stage_public_flash.py` creates a single-page site for any HTTPS static host, excluding local manuals, PDFs and manual-search assets. License notices stay on the page, with full license texts included as downloads. Device-side online OTA alone is disabled until a new readll OTA origin is configured, with no legacy request or fallback.
 
 An independent, open-source reading firmware for the **MindReset RDP-G01-W** ESP32-S3 e-paper board. It is based on [MindReset's official demo firmware](https://github.com/MindReset/read_pico_firmware), but is **not an official MindReset release**.
 
@@ -42,12 +45,12 @@ Wi-Fi/TLS memory peaks, PSRAM, sleep and PMU behavior.
 
 Website browser regression (Python Playwright with Chromium required):
 `python tools\site_browser_test.py --screenshots build\site-tests\screenshots`.
-It covers responsive layouts, keyboard previews, the manual and installer
+It covers responsive layouts, keyboard previews, upstream links, inline notices and installer
 availability/error states without connecting to a device.
 
-## Current release: rc92
+## Current build: rc95
 
-This release adds selectable clocks, monthly reading records, shelf categories and retained page positions, with smoother inertial scrolling, short clock updates, cached avatars, fine reading weight, vertical reading and page-turner fixes. Tickets use the system font; home and reader titles reuse their respective active fonts at native sizes. USB and TF packages are generated from one build. Online OTA remains unavailable until a new origin is configured. See the [changelog](docs/CHANGELOG.md).
+Firmware behavior follows kiikoread through rc95: asynchronous covers and avatars, row-bounded reading prefetch, corrected return origins, unified time restoration and synchronization, vertical typography fixes, original GC16 full refresh and post-refresh pixel release. Settings lists use one discrete step per gesture, without inertia. The bottom-edge Tools gesture frees all reader key mappings. readll maintains RSS, its identity and website, and its disabled device-side online OTA boundary. USB and TF packages come from one build. See the [changelog](docs/CHANGELOG.md).
 
 ### Settings, storage and lock fixes
 
@@ -66,7 +69,7 @@ The main-screen ripple matches the reader's compact launch timing: eight bands, 
 
 List covers bounce gently and settle before opening. Only the cover movement region updates: fast mode uses monochrome differentials, ordinary/water retain grays, without an extra feedback frame.
 
-Swipe down from the top edge to open the WiFi, Bluetooth, refresh and lock controls; swipe up, tap outside or press Back to close. WiFi connects the last saved network or disconnects it, unless a transfer is busy. Reader key controls offer custom actions and two presets. The default is Previous / Tools / Next; the second is Home / Full screen / Tools. A middle hold defaults to Home and can also be mapped to refresh or other actions. At least one of the three short presses or the middle hold must open Tools; startup and backup restoration repair a missing entry to middle-short Tools. Center double taps always toggle full screen, independently of mappings. Single taps use left/right halves or upper 1/3 / lower 2/3. New books open full screen; a page turn dismisses Tools and returns to full screen. These choices persist across reboot and configuration restore.
+Swipe down from the top edge to open the WiFi, Bluetooth, refresh and lock controls; swipe up, tap outside or press Back to close. WiFi connects the last saved network or disconnects it, unless a transfer is busy. Reader key controls offer custom actions and two presets. The default is Previous / Tools / Next; the second is Home / Full screen / Tools. A middle hold defaults to Home and can also be mapped to refresh or other actions. All mappings are free: the permanent bottom-edge upward gesture opens Tools, so startup and backup restoration no longer force a Tools key. Home/return actions respect whether reading began at Home or the shelf. Center double taps always toggle full screen, independently of mappings. Single taps use left/right halves or upper 1/3 / lower 2/3. New books open full screen; a page turn dismisses Tools and returns to full screen. These choices persist across reboot and configuration restore.
 
 The firmware checkpoints the book, position and full-screen state before lock, consuming deep-wake resume only once. Interrupted opening routes to an operable recovery page with the book name, Home and confirmed deletion, without automatic retries. Tickets always use the system face and restore the reader face on light wake. Quick controls retain grayscale borders in all main modes. Fast mode retains only BW covers; ordinary/water retain only gray covers and free obsolete formats on a policy change. Home resume titles reuse the active system face at 40px; reader book/chapter titles reuse the reader face at 32/48px. Outlines rasterize directly without additional built-in fonts or simultaneously loading system and reader faces; unavailable faces retain the safe built-in missing-glyph fallback. These changes are included in rc88.
 
@@ -123,6 +126,13 @@ On Windows, follow [the native setup guide](docs/ONBOARDING.md#32-本机-windows
 and activate the installed v6.1 environment in each new terminal. Run
 `.\tools\build_firmware.ps1` for an isolated CI build in `build\ci`, or add
 `-Profile board` for board timing in `build\board`. Neither command flashes a device.
+
+Every build checks the remote branches pinned in `tools/upstream.json`. Changes
+print a compare URL without fetching or merging code; network/check failures fail
+the build. Review and integrate upstream changes before updating a pin. Local
+offline builds may explicitly use `-DREADLL_SKIP_UPSTREAM_CHECK=ON` or the Windows
+wrapper's `-SkipUpstreamCheck`; publication requires
+`-DREADLL_REQUIRE_CURRENT_UPSTREAM=ON` and rejects both unreviewed changes and skipping.
 
 ## Books and fonts
 
