@@ -45,7 +45,8 @@ static bool app_poll_main_navigation(app_ctx_t *ctx){++nav_polls;if(nav_stop>=0&
 unsigned book_cover_jobs_begin(void){return 1;}
 bool book_cover_jobs_submit(unsigned generation,unsigned slot,const book_cover_job_t *q){assert(generation==1&&slot<9&&q->fast==fast);queued|=1u<<slot;return true;}
 int book_cover_jobs_take(unsigned generation,unsigned slot,book_cover_result_t *result){assert(generation==1);
- if(failed_mask&(1u<<slot))return -1;if(!(ready_mask&(1u<<slot)))return 0;
+ if(failed_mask&(1u<<slot))return -1;
+ if(!(ready_mask&(1u<<slot)))return 0;
  *result=(book_cover_result_t){.pixels=malloc(1),.width=164,.height=214,.fast=fast};assert(result->pixels);return 1;}
 '''
 for name in ['prepare_cover_batch','shelf_cover_frame_ready','shelf_cover_reveal_mask','warm_shelf_lock_cover','gather_cover_entry']:
