@@ -3,6 +3,11 @@
 按版本简述对用户可见的变化；使用方法见 [README](../README.zh-CN.md)。
 User-visible changes by release; see [README](../README.md) for usage.
 
+## 0.3.3-rc96
+
+- 修复 RSS 已编译但产品界面没有可达入口：设置首屏「日期与时间」下新增「RSS 阅读」，四个底部标签不变。账户配置仍使用传书网页的 RSS 区域。
+  Fix RSS being compiled but unreachable from product navigation: add RSS reading below Date & time on the first Settings screen, retaining four tabs. Account setup remains in the transfer page's RSS section.
+
 ## 0.3.3-rc95
 
 - 原创 readll 单页官网使用 “READ ALL” slogan，并列展示书籍与文章，保留界面预览、WebUSB、TF 下载与页内许可；注明界面沿用 kiikoread，详细操作链接至其使用说明，不复制或托管手册。

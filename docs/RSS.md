@@ -25,6 +25,12 @@ images and enclosures are outside the first-release scope.
 
 ## 配置 / Configuration
 
+设备入口为 **设置 → RSS 阅读**，位于设置首屏「连接与时间」分组的「日期与时间」下方。
+不需要打开旧功能菜单；列表中键返回首页。
+
+Open **Settings → RSS 阅读**, below Date & time in the first settings screen's
+Connection & time group. The legacy menu is not needed; the middle list key returns Home.
+
 在设备传书网页的 RSS 区域填写 Miniflux 地址和 API Key。地址必须使用 HTTPS；保存前会调用
 `/v1/me` 验证。已有 Token 不会从设备回显，只能覆盖或清除。
 

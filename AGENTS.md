@@ -40,6 +40,9 @@ The repository is `ww4yne/readll`; Pages publishes builds to `https://ww4yne.git
 功能与交互跟随 kiikoread，readll 自行维护 RSS、身份、单页网站及设备联网 OTA 禁用边界。当前审查基线见 `tools/upstream.json`；每次构建检查远端变化但不合并，Pages 发布拒绝未审查变化。只有显式离线本机构建可使用 `READLL_SKIP_UPSTREAM_CHECK=ON`。
 Follow kiikoread functionality and interactions; maintain readll RSS, identity, single-page site and disabled device-side online OTA boundaries. Reviewed baselines live in `tools/upstream.json`; every build checks remote changes without merging, and Pages rejects unreviewed changes. Only explicit local offline builds may set `READLL_SKIP_UPSTREAM_CHECK=ON`.
 
+RSS 的产品入口是设置首屏「日期与时间」下的「RSS 阅读」；只注册页面不代表入口可达，禁止依赖产品页已关闭的旧功能菜单。
+The product RSS entry is RSS reading below Date & time on the first Settings screen. Registering a page does not make it reachable; never rely on the legacy menu disabled on product pages.
+
 在配置并审核新的 OTA origin 前，仅设备内联网 OTA 必须显式禁用：UI 与调用路径返回“尚未配置”，不得请求任何旧站点或旧仓库，也不得静默回退。WebUSB 网页刷机、静态站 staging、完整 USB 包与 TF 本地升级必须继续可用；不要编造新域名。
 Until a new OTA origin is configured and reviewed, only device-side online OTA is disabled: the UI and call path report “not configured”, never request a legacy website or repository, and never silently fall back. WebUSB flashing, static-site staging, complete USB packages and local TF updates must remain available; do not invent a domain.
 
@@ -50,7 +53,7 @@ Until a new OTA origin is configured and reviewed, only device-side online OTA i
 | `main/app_main.c` | 开机装配：板级 init、读设置、定 VCOM、开机图、字体，然后交给 `app_loop`。/ Boot wiring, then `app_loop`. |
 | `main/app/app.h` | `app_desc_t` / `app_ctx_t` / `app_redraw_t` 契约。/ Page contract. |
 | `main/app/app_loop.c` | 与页面无关的事件循环：触摸去抖、三键与菜单把手、切页、刷屏、锁屏、SD 字体延迟加载。/ Shared event loop. |
-| `main/app/app_registry.c` | 菜单顺序。加页只改这张表。/ Menu table. |
+| `main/app/app_registry.c` | 产品页面注册与主标签顺序；可见入口由产品页面显式接入。/ Product registry and main-tab order; product pages wire visible entries explicitly. |
 | `main/app/app_config.h` | 均衡 / ALL_DU 刷新档位。/ Refresh profile. |
 | `main/ui/` | `ui_kit` 排版常量与绘制原语；`ui_menu` 两层菜单。页面互不引用。/ Shared drawing; pages do not include each other. |
 | `main/rss/` | Miniflux API、严格 JSON、离线缓存与同步状态机；页面和配置层通过公开头文件接入。/ Miniflux API, bounded JSON, offline cache and sync state machine exposed through public headers. |
@@ -107,9 +110,9 @@ One file, one `app_desc_t`. Order matches `app_registry.c`.
 | `app_image.c` | 内置灰阶图与 TF 卡 JPG/PNG 图片对比。/ Built-in gray chart and SD JPG/PNG image comparison. | `book_cover`, `read_pico_sd` |
 | `app_transfer.c` | 设备热点/已有 WiFi 传 TXT/EPUB，触屏/网页配网与热点二维码，离页停止；停止按钮返回进入前的位置。/ AP/STA upload with touchscreen/web provisioning and hotspot QR; stops and returns to the entry origin. | `read_pico_transfer`, `book_store` |
 
-加页：在 `main/apps/` 新建文件，实现需要的回调，把它加入 `app_registry.c` 的 `s_apps[]`。锁屏前状态保存通过 `on_before_lock` 回调接入主循环。
+加页：在 `main/apps/` 新建文件，实现需要的回调，把它加入 `app_registry.c` 的 `s_apps[]`；还要接入并测试可见的产品入口，已关闭的旧菜单不算入口。锁屏前状态保存通过 `on_before_lock` 回调接入主循环。
 
-To add a page: create it in `main/apps/`, implement its callbacks, and append it to `s_apps[]`. Use `on_before_lock` to flush state before lock rendering.
+To add a page: create it in `main/apps/`, implement its callbacks, and append it to `s_apps[]`. Also wire and test a visible product entry; the disabled legacy menu is not an entry. Use `on_before_lock` to flush state before lock rendering.
 
 ## `app_desc_t` 契约 / Contract
 
