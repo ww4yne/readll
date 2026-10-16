@@ -229,7 +229,7 @@ rss_json_result_t rss_json_parse_categories(const char *json, size_t length,
 }
 
 static bool parse_entry(const cJSON *item, rss_entry_page_t *page, rss_entry_t *entry,
-                        rss_json_result_t *error) {
+                        bool include_body, rss_json_result_t *error) {
     memset(entry, 0, sizeof(*entry));
     const cJSON *status = unique_item(item, "status");
     const cJSON *starred = unique_item(item, "starred");
@@ -259,6 +259,7 @@ static bool parse_entry(const cJSON *item, rss_entry_page_t *page, rss_entry_t *
     entry->bookmarked = cJSON_IsTrue(starred);
     entry->reading_time = (uint32_t)reading_time->valuedouble;
     if (!exact_i64(category, "id", &entry->category_id) || entry->category_id <= 0) return false;
+    if (!include_body) return true;
     size_t body_length = strnlen(content->valuestring, RSS_ENTRY_BODY_MAX + 1);
     if (body_length > RSS_ENTRY_BODY_MAX ||
         body_length + 1 > sizeof(page->body_pool) - page->body_used) {
@@ -272,7 +273,8 @@ static bool parse_entry(const cJSON *item, rss_entry_page_t *page, rss_entry_t *
     return true;
 }
 
-rss_json_result_t rss_json_parse_entries(const char *json, size_t length, rss_entry_page_t *out) {
+static rss_json_result_t parse_entries(const char *json, size_t length, rss_entry_page_t *out,
+                                      bool include_body) {
     if (!out) return RSS_JSON_INVALID_ARGUMENT;
     memset(out, 0, sizeof(*out));
     cJSON *root = NULL;
@@ -292,11 +294,36 @@ rss_json_result_t rss_json_parse_entries(const char *json, size_t length, rss_en
     result = RSS_JSON_INVALID;
     bool valid = true;
     for (int i = 0; i < count && valid; ++i) {
-        valid = parse_entry(cJSON_GetArrayItem(entries, i), out, &out->items[i], &result);
+        valid = parse_entry(cJSON_GetArrayItem(entries, i), out, &out->items[i],
+                            include_body, &result);
     }
     if (valid) {
         out->count = (size_t)count;
         out->total = total;
+        result = RSS_JSON_OK;
+    }
+    cJSON_Delete(root);
+    if (result != RSS_JSON_OK) memset(out, 0, sizeof(*out));
+    return result;
+}
+
+rss_json_result_t rss_json_parse_entries(const char *json, size_t length, rss_entry_page_t *out) {
+    return parse_entries(json, length, out, true);
+}
+
+rss_json_result_t rss_json_parse_metadata(const char *json, size_t length, rss_entry_page_t *out) {
+    return parse_entries(json, length, out, false);
+}
+
+rss_json_result_t rss_json_parse_entry(const char *json, size_t length, rss_entry_page_t *out) {
+    if (!out) return RSS_JSON_INVALID_ARGUMENT;
+    memset(out, 0, sizeof(*out));
+    cJSON *root = NULL;
+    rss_json_result_t result = parse_root(json, length, &root);
+    if (result != RSS_JSON_OK) return result;
+    result = RSS_JSON_INVALID;
+    if (parse_entry(root, out, &out->items[0], true, &result)) {
+        out->count = out->total = 1;
         result = RSS_JSON_OK;
     }
     cJSON_Delete(root);

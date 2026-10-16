@@ -2,9 +2,12 @@
  * 中文：执行实际刷机页补丁，验证串口过滤、翻译及观察器不重复触发。
  * English: Execute actual flasher patches; verify port filtering, translation and observer idempotence.
  */
-const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
-const page=fs.readFileSync(process.argv[2]||'flash/index.html','utf8');
-const scripts=[...page.matchAll(/<script>([\s\S]*?)<\/script>/g)].slice(0,2).map(x=>x[1]);
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict'),path=require('node:path');
+const filename=process.argv[2]||'flash/index.html';
+const page=fs.readFileSync(filename,'utf8');
+const scripts=filename.endsWith('.js') ? [page] : page.includes('src="./installer-bridge.js"')
+ ? [fs.readFileSync(path.join(path.dirname(filename),'installer-bridge.js'),'utf8')]
+ : [...page.matchAll(/<script>([\s\S]*?)<\/script>/g)].slice(0,2).map(x=>x[1]);
 let options,writes=0,interval;const watched=[];
 class Element{attachShadow(){this.shadowRoot={querySelectorAll:()=>[],ownerDocument:doc,texts:[]};return this.shadowRoot;}}
 const doc={getElementById:()=>null,createTreeWalker(root){let at=0;return{nextNode:()=>root.texts[at++]||null}}};

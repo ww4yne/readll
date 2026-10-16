@@ -4,13 +4,18 @@
 [English](README.md) · [日本語](README.ja-JP.md) ·
 [第三方许可](THIRD_PARTY_NOTICES.md)
 
-项目、固件 UI、模拟器、网页、构建 project 和升级包技术标识统一为小写 **readll**。`tools/package_flash.py` 从同一次构建生成完整 USB/WebUSB 资产与 TF Bin；`tools/stage_public_flash.py` 生成可部署到任意 HTTPS 静态站的纯白刷机网站。仅设备内联网 OTA 在新 readll origin 配置前禁用，不访问旧源，也不静默回退。
+**readll 意为 read all：一切关于阅读。** 原创官网将书籍与文章并列呈现，提供设备预览、安装、下载与说明书，而非替换上游网站的品牌名称。
+
+项目、固件 UI、模拟器、网页、构建 project 和升级包技术标识统一为小写 **readll**。`tools/package_flash.py` 从同一次构建生成完整 USB/WebUSB 资产与 TF Bin；`tools/stage_public_flash.py` 生成可部署到任意 HTTPS 静态站的原创阅读固件网站。仅设备内联网 OTA 在新 readll origin 配置前禁用，不访问旧源，也不静默回退。
 
 这是为 **MindReset RDP-G01-W** 墨水屏开发板制作的独立开源阅读固件，基于 [MindReset 官方示例固件](https://github.com/MindReset/read_pico_firmware) 开发，**并非 MindReset 官方发布**。
 
 界面包括首页、书架、文件管理和设置；RSS 从菜单直接进入每页 12 条的 Miniflux
-未读队列，支持离线正文、已读同步、与 EPUB 共用的排版引擎及三键翻页。固件也可阅读
+未读队列，支持离线浏览标题、已读同步、与 EPUB 共用的排版引擎及三键翻页。固件也可阅读
 TF 卡中的 EPUB、TXT，保存阅读进度，并通过 WiFi、设备热点或 USB 传输文件。
+
+RSS 正文只在打开时联网获取，返回列表即释放，绝不写入持久缓存，也不按时间预缓存。
+打开失败不会把所选文章及其上方条目标为已读。
 
 ## 当前正式版：rc92
 
@@ -112,6 +117,10 @@ idf.py build
 ```
 
 `sdkconfig.defaults` 使用本开发板对应的 Flash/PSRAM 时序；`sdkconfig.ci` 仅用于编译检查。硬件资料请看 [MindReset 官方文档](https://dot.mindreset.tech/docs/read_0)。预编译固件仅面向 RDP-G01-W。
+
+Windows 本机安装见[环境搭建指南](docs/ONBOARDING.md#32-本机-windows-安装)，每个新终端先激活已安装的 v6.1 环境。
+运行 `.\tools\build_firmware.ps1`，CI 配置与产物独立存放在 `build\ci`；
+加 `-Profile board` 则使用真机时序并输出到 `build\board`。两个命令都不会刷写设备。
 
 ## 书籍与字体
 

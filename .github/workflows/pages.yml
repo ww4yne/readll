@@ -27,8 +27,8 @@ jobs:
         shell: bash
         run: |
           . "$IDF_PATH/export.sh"
-          idf.py -B build/pages -D SDKCONFIG=build/pages/sdkconfig -D SDKCONFIG_DEFAULTS=sdkconfig.ci set-target esp32s3
-          idf.py -B build/pages -D SDKCONFIG=build/pages/sdkconfig -D SDKCONFIG_DEFAULTS=sdkconfig.ci build
+          idf.py -B build/pages -D SDKCONFIG=build/pages/sdkconfig -D SDKCONFIG_DEFAULTS=sdkconfig.defaults set-target esp32s3
+          idf.py -B build/pages -D SDKCONFIG=build/pages/sdkconfig -D SDKCONFIG_DEFAULTS=sdkconfig.defaults build
           python3 tools/package_flash.py build/pages build/pages-package
           python3 tools/stage_public_flash.py _site --package-dir build/pages-package
           python3 tools/verify_flash_bundle.py _site

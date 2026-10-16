@@ -4,11 +4,15 @@
 [中文说明](README.zh-CN.md) · [日本語](README.ja-JP.md) ·
 [Third-party notices](THIRD_PARTY_NOTICES.md)
 
-`readll` is an independent firmware focused on fast, offline-capable
-Miniflux reading and synchronized read state. It is based on the
+**readll means “read all” — all about reading.** Its independently designed
+website brings books and articles together, with device previews, installation,
+downloads and documentation; it is not a renamed upstream landing page.
+
+`readll` is independent firmware for EPUB/TXT books, fast Miniflux unread-list
+review and synchronized read state. It is based on the
 hardware BSP lineage in `wegooo-cell/read-pico-reader` and imports official
 MindReset driver fixes by review rather than replacing product modules.
-RSS setup, compatibility, offline-cache and synchronization behavior are
+RSS setup, compatibility, metadata storage and synchronization behavior are
 documented in [docs/RSS.md](docs/RSS.md).
 
 The project, firmware UI, simulator, website, build project and package names use lowercase **readll**. `tools/package_flash.py` produces the complete USB/WebUSB parts and TF image from one build; `tools/stage_public_flash.py` creates a self-contained site for any HTTPS static host. Device-side online OTA alone is disabled until a new readll OTA origin is configured, with no legacy request or fallback. The PDF can be regenerated from `docs/user-manual.zh-CN.json` with `tools/build_user_manual.py --font /path/to/a/static-CJK.ttf` (Python ReportLab required).
@@ -16,11 +20,15 @@ The project, firmware UI, simulator, website, build project and package names us
 An independent, open-source reading firmware for the **MindReset RDP-G01-W** ESP32-S3 e-paper board. It is based on [MindReset's official demo firmware](https://github.com/MindReset/read_pico_firmware), but is **not an official MindReset release**.
 
 The four main tabs remain Home, Bookshelf, Files, and Settings. RSS opens from
-the menu directly into a 12-row Miniflux unread queue, with offline text
-articles, synchronized read state, EPUB-shared typography, and hardware-key
+the menu directly into a 12-row Miniflux unread queue, with offline title-list
+review, synchronized read state, EPUB-shared typography, and hardware-key
 pagination. The firmware also reads
 EPUB and TXT books from a TF card, remembers reading progress, and supports
 Wi-Fi, hotspot, or USB file transfer.
+
+RSS bodies are fetched when opened and kept only in memory until returning to
+the list. They are never persisted or prefetched into a local body cache.
+Opening requires a network connection; a failed open leaves the unread queue unchanged.
 
 For local RSS regression tests:
 
@@ -31,6 +39,11 @@ For local RSS regression tests:
 These tests use a local mock Miniflux service and do not require account
 credentials. Hardware validation remains required for e-paper refresh,
 Wi-Fi/TLS memory peaks, PSRAM, sleep and PMU behavior.
+
+Website browser regression (Python Playwright with Chromium required):
+`python tools\site_browser_test.py --screenshots build\site-tests\screenshots`.
+It covers responsive layouts, keyboard previews, the manual and installer
+availability/error states without connecting to a device.
 
 ## Current release: rc92
 
@@ -81,6 +94,10 @@ If automatic entry to download mode fails on a device already running this firmw
 
 The release manifest is [`flash/manifest.json`](flash/manifest.json); it flashes the bootloader, partition table, application, and the OTA data partition. Existing NVS settings and the internal book partition are preserved. The site is published from an explicit allowlist in [`.github/workflows/pages.yml`](.github/workflows/pages.yml), so local books, backups, and extra font packages are not uploaded. See the [release changelog](docs/CHANGELOG.md).
 
+The Pages workflow builds the RDP-G01-W firmware with `sdkconfig.defaults`, not
+the compile-only CI timing. The staged site needs only HTTPS static hosting;
+serve the complete directory with relative paths intact, using desktop Chrome or Edge.
+
 ## Online updates
 
 Device-side online OTA is not configured. The system-update page reports **在线升级尚未配置**, and the firmware backend has no feed URL, HTTP request path, or legacy fallback. This does not disable the WebUSB flashing website, complete USB bundle, or TF update image.
@@ -101,6 +118,11 @@ idf.py build
 ```
 
 The board-specific flash and PSRAM timing is in `sdkconfig.defaults`. `sdkconfig.ci` is for compile checks only. Follow the [MindReset hardware documentation](https://dot.mindreset.tech/docs/read_0) for the board. A prebuilt firmware image is provided for the RDP-G01-W only.
+
+On Windows, follow [the native setup guide](docs/ONBOARDING.md#32-本机-windows-安装)
+and activate the installed v6.1 environment in each new terminal. Run
+`.\tools\build_firmware.ps1` for an isolated CI build in `build\ci`, or add
+`-Profile board` for board timing in `build\board`. Neither command flashes a device.
 
 ## Books and fonts
 

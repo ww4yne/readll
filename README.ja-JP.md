@@ -1,5 +1,12 @@
 # readll
 
+**readll は “read all” — 読むことのすべて。** 独自設計のサイトで書籍と記事を並べ、
+画面プレビュー、インストール、ダウンロードと説明書を提供します。
+
+RSS は Miniflux の未読一覧を 12 件ずつ表示し、タイトル一覧と既読同期の待機操作を保存します。
+本文は開く時だけオンライン取得し、一覧へ戻るとメモリから解放します。
+本文の永続保存や時間に基づく先読みは行わず、取得失敗時は未読状態を変えません。
+
 プロジェクト、ファームウェア UI、シミュレーター、Web、CMake project、パッケージ名は小文字 **readll** に統一します。`tools/package_flash.py` は USB/WebUSB と TF の資産を生成し、`tools/stage_public_flash.py` は任意の HTTPS 静的ホストへ配置できるサイトを生成します。生成物のサイズ・SHA-256 は `release-assets.json`、任意のローカル公開元マッピングは別 schema の `flash/release-sources.json` を使用します。無効なのは本体内オンライン OTA だけで、新しい readll OTA origin が設定されるまで旧ソースや暗黙のフォールバックを使用しません。
 
 

@@ -107,26 +107,20 @@ class ModelContractTests(unittest.TestCase):
         WORK.mkdir(parents=True)
 
     def test_cache_limits_lru_and_corrupt_backup_recovery(self) -> None:
-        limits = (3, 2, 12, 8)
-        cache = CacheModel(*limits)
+        cache = CacheModel(3)
         for entry_id in (1, 2, 3):
             cache.put_metadata({"id": entry_id, "status": "unread", "starred": False})
         cache.get_metadata(1)
         cache.put_metadata({"id": 4, "status": "unread", "starred": False})
         self.assertEqual(set(cache.metadata), {1, 3, 4})
-        cache.put_body(1, b"aaa")
-        cache.put_body(2, b"bbb")
-        cache.get_body(1)
-        cache.put_body(3, b"ccc")
-        self.assertEqual(set(cache.bodies), {1, 3})
-        with self.assertRaises(ValueError):
-            cache.put_body(4, b"123456789")
+        cache.put_metadata({"id": 1, "status": "unread", "content": "never persist this body"})
         path = WORK / "cache.bin"
         cache.save(path)
+        self.assertNotIn(b"never persist this body", path.read_bytes())
         cache.put_metadata({"id": 5, "status": "read", "starred": True})
         cache.save(path)
         path.write_bytes(b"corrupt")
-        recovered = CacheModel.load(path, limits)
+        recovered = CacheModel.load(path, 3)
         self.assertNotIn(5, recovered.metadata)
         self.assertEqual(set(recovered.metadata), {1, 3, 4})
 
@@ -210,8 +204,8 @@ class StaticAndFixtureContractTests(unittest.TestCase):
         self.assertRegex(model_h, r"#define RSS_PAGE_ENTRY_MAX 20\b")
         self.assertRegex(model_h, r"#define RSS_ENTRY_BODY_MAX \(24U \* 1024U\)")
         self.assertRegex(cache_h, r"#define RSS_CACHE_METADATA_MAX 128\b")
-        self.assertRegex(cache_h, r"#define RSS_CACHE_BODY_MAX 32\b")
-        self.assertRegex(cache_h, r"#define RSS_CACHE_BODY_TOTAL_MAX \(256U \* 1024U\)")
+        self.assertNotIn("body_data[", cache_h)
+        self.assertNotIn("rss_cache_put_body", cache_h)
         self.assertRegex(model_h, r"#define RSS_AUTH_TOKEN_MAX 256\b")
 
     def test_project_and_pending_persistence_contracts(self) -> None:
@@ -226,6 +220,21 @@ class StaticAndFixtureContractTests(unittest.TestCase):
         self.assertIn("rss_sync_restore_operation", app)
         self.assertIn("operation_revision", sync_h)
         self.assertNotIn("pending_before != s_sync.operation_count", app)
+
+    def test_selected_body_only_and_failed_open_preserves_unread(self) -> None:
+        app = (ROOT / "main/apps/app_rss.c").read_text(encoding="utf-8")
+        sync = (ROOT / "main/rss/rss_sync.c").read_text(encoding="utf-8")
+        client = (ROOT / "main/rss/rss_client.c").read_text(encoding="utf-8")
+        self.assertNotIn("rss_cache_put_body", sync)
+        self.assertNotIn("rss_cache_get_body", app)
+        self.assertIn("rss_json_parse_metadata", client)
+        self.assertIn("rss_client_get_entry", app)
+        self.assertIn('"/v1/entries/%lld"', client)
+        gesture = app[app.index("static app_redraw_t list_gesture("):
+                      app.index("static app_redraw_t article_gesture(")]
+        self.assertLess(gesture.index("open_article(id)"), gesture.index("mark_page_through(item)"))
+        self.assertIn("if (!open_article(id)) return APP_REDRAW_PAGE;", gesture)
+        self.assertIn("正文需联网打开", app)
 
     def test_unread_queue_and_shared_layout_contract(self) -> None:
         app = (ROOT / "main/apps/app_rss.c").read_text(encoding="utf-8")
@@ -302,6 +311,7 @@ class StaticAndFixtureContractTests(unittest.TestCase):
             "id-token: write",
             "actions/configure-pages@v5",
             "espressif/idf:v6.1",
+            "SDKCONFIG_DEFAULTS=sdkconfig.defaults",
             "tools/package_flash.py build/pages build/pages-package",
             "tools/stage_public_flash.py _site --package-dir build/pages-package",
             "tools/verify_flash_bundle.py _site",
@@ -310,6 +320,7 @@ class StaticAndFixtureContractTests(unittest.TestCase):
         )
         for value in required:
             self.assertIn(value, workflow)
+        self.assertNotIn("sdkconfig.ci", workflow)
         ordered = (
             "tools/package_flash.py build/pages build/pages-package",
             "tools/stage_public_flash.py _site --package-dir build/pages-package",

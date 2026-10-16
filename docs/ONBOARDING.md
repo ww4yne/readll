@@ -80,9 +80,42 @@ This document is for **first-time human developers and AI agents**. After readin
 
 ### 3.2 本机 Windows 安装
 
-1. 用 [ESP-IDF Windows Installer](https://dl.espressif.com/dl/esp-idf/) 或 VS Code 扩展 `espressif.esp-idf-extension` 安装 **v6.1**，目标 esp32s3。
-2. 打开 "ESP-IDF 6.1 PowerShell" 或在 VS Code 里用扩展的终端（会自动 `export.ps1`）。
-3. 验证：`idf.py --version` 输出 `v6.1…`。
+使用官方 [ESP-IDF Installation Manager（EIM）](https://docs.espressif.com/projects/esp-idf/en/v6.1/esp32s3/get-started/windows-setup.html)，明确选择
+**v6.1 发布版**和 `esp32s3`，不要选择 latest/master。
+Use the official EIM installer, selecting the **v6.1 release** and `esp32s3`, not latest/master.
+
+下载官方 Windows x64 CLI、确认数字签名为 Espressif 后，在 PowerShell 执行：
+After downloading the official Windows x64 CLI and verifying its Espressif digital signature:
+
+```powershell
+.\eim.exe install --idf-versions v6.1 --target esp32s3 --path C:\Espressif `
+  --esp-idf-json-path C:\Espressif\tools --install-all-prerequisites true `
+  --skip-components-download true --do-not-track true
+```
+
+`--skip-components-download` 只跳过完整组件仓库镜像；项目所需依赖仍在首次构建时按
+`dependencies.lock` 获取。安装目录、工具缓存与工作区均不要放在 OneDrive。
+The flag skips only the full component-registry mirror; the first project build still fetches
+dependencies from `dependencies.lock`. Keep installation, caches and workspaces outside OneDrive.
+
+每个新终端先运行安装器输出的 v6.1 PowerShell 激活脚本，再验证并构建：
+In each new terminal, run the installer's v6.1 PowerShell activation script, then verify and build:
+
+```powershell
+. C:\Espressif\tools\Microsoft.v6.1.PowerShell_profile.ps1
+idf.py --version
+.\tools\build_firmware.ps1
+```
+
+以上激活路径对应示例安装目录；更换目录时使用 EIM 实际输出的路径。
+The activation path matches the example installation directory; use the path printed by EIM if different.
+
+默认 `ci` 构建使用 `sdkconfig.ci`，产物及独立 `sdkconfig` 在 `build\ci`；
+`.\tools\build_firmware.ps1 -Profile board` 使用 `sdkconfig.defaults` 写入 `build\board`。
+两者都不会改写根目录的产品 `sdkconfig`，不会刷写设备。CI 时序不得用于产品交付。
+The default `ci` build uses `sdkconfig.ci` and keeps output/configuration in `build\ci`.
+`-Profile board` uses `sdkconfig.defaults` in `build\board`. Neither overwrites the root
+product configuration or flashes hardware. Never ship CI timing as the product default.
 
 本机工具链、容器、串口号等机器相关状态写进 `docs/HANDOFF.local.md` 的"环境备注"，不写进本文。
 

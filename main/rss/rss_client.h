@@ -58,11 +58,16 @@ bool rss_client_get_me(const rss_client_t *client, rss_user_t *out, rss_client_e
 bool rss_client_get_categories(const rss_client_t *client, rss_category_list_t *out,
                                rss_client_error_t *error);
 
-/// 获取一页条目，调用方提供至少 RSS_JSON_RESPONSE_MAX+1 字节暂存区。
-/// Fetch one entry page; the caller supplies at least RSS_JSON_RESPONSE_MAX+1 bytes of scratch.
+/// 获取一页 metadata，丢弃响应正文；暂存区至少 RSS_JSON_RESPONSE_MAX+1 字节。
+/// Fetch metadata, discarding response bodies; scratch is at least RSS_JSON_RESPONSE_MAX+1 bytes.
 bool rss_client_get_entries(const rss_client_t *client, const rss_entries_query_t *query,
                             char *scratch, size_t scratch_size, rss_entry_page_t *out,
                             rss_client_error_t *error);
+
+/// 按需获取单篇正文，不写入持久缓存。/ Fetch one article on demand without persistent caching.
+bool rss_client_get_entry(const rss_client_t *client, int64_t entry_id,
+                          char *scratch, size_t scratch_size, rss_entry_page_t *out,
+                          rss_client_error_t *error);
 
 /// 幂等批量设置 read/unread。/ Idempotently set read/unread for a batch.
 bool rss_client_set_read(const rss_client_t *client, const int64_t *entry_ids, size_t count,

@@ -18,14 +18,10 @@ class Pending:
 
 
 class CacheModel:
-    def __init__(self, metadata_max: int, body_max: int, body_total_max: int, body_single_max: int):
+    def __init__(self, metadata_max: int):
         self.metadata_max = metadata_max
-        self.body_max = body_max
-        self.body_total_max = body_total_max
-        self.body_single_max = body_single_max
         self.sequence = 0
         self.metadata: dict[int, tuple[dict, int]] = {}
-        self.bodies: dict[int, tuple[bytes, int]] = {}
 
     def _touch(self) -> int:
         self.sequence += 1
@@ -35,7 +31,8 @@ class CacheModel:
         if entry["id"] not in self.metadata and len(self.metadata) >= self.metadata_max:
             oldest = min(self.metadata, key=lambda key: self.metadata[key][1])
             del self.metadata[oldest]
-        self.metadata[entry["id"]] = (dict(entry), self._touch())
+        self.metadata[entry["id"]] = (
+            {key: value for key, value in entry.items() if key != "content"}, self._touch())
 
     def get_metadata(self, entry_id: int) -> dict | None:
         value = self.metadata.get(entry_id)
@@ -45,34 +42,10 @@ class CacheModel:
         self.metadata[entry_id] = (entry, self._touch())
         return entry
 
-    def put_body(self, entry_id: int, body: bytes) -> None:
-        if len(body) > self.body_single_max:
-            raise ValueError("body limit")
-        self.bodies.pop(entry_id, None)
-        while self.bodies and (
-            len(self.bodies) >= self.body_max
-            or sum(len(value[0]) + 1 for value in self.bodies.values()) + len(body) + 1
-            > self.body_total_max
-        ):
-            oldest = min(self.bodies, key=lambda key: self.bodies[key][1])
-            del self.bodies[oldest]
-        if len(body) + 1 > self.body_total_max:
-            raise ValueError("body total limit")
-        self.bodies[entry_id] = (body, self._touch())
-
-    def get_body(self, entry_id: int) -> bytes | None:
-        value = self.bodies.get(entry_id)
-        if value is None:
-            return None
-        body, _ = value
-        self.bodies[entry_id] = (body, self._touch())
-        return body
-
     def save(self, path: Path) -> None:
         payload = json.dumps(
             {
                 "metadata": {str(k): v[0] for k, v in self.metadata.items()},
-                "bodies": {str(k): v[0].decode() for k, v in self.bodies.items()},
             },
             sort_keys=True,
         ).encode()
@@ -83,7 +56,7 @@ class CacheModel:
         path.write_bytes(wrapper)
 
     @classmethod
-    def load(cls, path: Path, limits: tuple[int, int, int, int]) -> "CacheModel":
+    def load(cls, path: Path, metadata_max: int) -> "CacheModel":
         for candidate in (path, path.with_suffix(path.suffix + ".bak")):
             try:
                 wrapper = json.loads(candidate.read_bytes())
@@ -91,11 +64,9 @@ class CacheModel:
                 if zlib.crc32(payload) != wrapper["crc32"]:
                     raise ValueError("crc")
                 saved = json.loads(payload)
-                cache = cls(*limits)
+                cache = cls(metadata_max)
                 for entry in saved["metadata"].values():
                     cache.put_metadata(entry)
-                for key, body in saved["bodies"].items():
-                    cache.put_body(int(key), body.encode())
                 return cache
             except (OSError, KeyError, TypeError, ValueError, json.JSONDecodeError):
                 continue

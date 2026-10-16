@@ -31,6 +31,8 @@ def main() -> int:
         json.dumps({"total": 1, "entries": [entry]}, separators=(",", ":")),
         encoding="utf-8",
     )
+    entry["content"] = "<p>selected body</p>"
+    (output / "generated_entry.json").write_text(json.dumps(entry), encoding="utf-8")
     print(f"generated parser fixtures: {output}")
     return 0
 

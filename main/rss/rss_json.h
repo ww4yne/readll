@@ -36,3 +36,9 @@ rss_json_result_t rss_json_parse_categories(const char *json, size_t length,
 
 /// 解析 /v1/entries；正文复制到页内正文池。/ Parse /v1/entries and copy bodies into the page pool.
 rss_json_result_t rss_json_parse_entries(const char *json, size_t length, rss_entry_page_t *out);
+
+/// 只解析列表 metadata，不保留正文。/ Parse list metadata without retaining bodies.
+rss_json_result_t rss_json_parse_metadata(const char *json, size_t length, rss_entry_page_t *out);
+
+/// 解析单篇 /v1/entries/{id}，正文仅存于页内。/ Parse one entry with its body in the page pool only.
+rss_json_result_t rss_json_parse_entry(const char *json, size_t length, rss_entry_page_t *out);

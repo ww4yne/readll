@@ -237,9 +237,32 @@ bool rss_client_get_entries(const rss_client_t *client, const rss_entries_query_
     }
     int received = request(client, HTTP_METHOD_GET, path, NULL, scratch, scratch_size, 200, error);
     rss_json_result_t parsed = received >= 0
-                                   ? rss_json_parse_entries(scratch, (size_t)received, out)
+                                   ? rss_json_parse_metadata(scratch, (size_t)received, out)
                                    : RSS_JSON_INVALID_ARGUMENT;
     return parse_result(received, parsed, error);
+}
+
+bool rss_client_get_entry(const rss_client_t *client, int64_t entry_id,
+                          char *scratch, size_t scratch_size, rss_entry_page_t *out,
+                          rss_client_error_t *error) {
+    if (!client || entry_id <= 0 || !scratch ||
+        scratch_size < RSS_JSON_RESPONSE_MAX + 1 || !out)
+        return fail(error, RSS_CLIENT_INVALID_ARGUMENT, ESP_ERR_INVALID_ARG, 0);
+    memset(out, 0, sizeof(*out));
+    char path[80];
+    int length = snprintf(path, sizeof(path), "/v1/entries/%lld", (long long)entry_id);
+    if (length <= 0 || (size_t)length >= sizeof(path))
+        return fail(error, RSS_CLIENT_INVALID_ARGUMENT, ESP_ERR_INVALID_SIZE, 0);
+    int received = request(client, HTTP_METHOD_GET, path, NULL, scratch, scratch_size, 200, error);
+    rss_json_result_t parsed = received >= 0
+                                   ? rss_json_parse_entry(scratch, (size_t)received, out)
+                                   : RSS_JSON_INVALID_ARGUMENT;
+    if (!parse_result(received, parsed, error)) return false;
+    if (out->items[0].id != entry_id) {
+        memset(out, 0, sizeof(*out));
+        return fail(error, RSS_CLIENT_JSON, ESP_OK, 200);
+    }
+    return true;
 }
 
 bool rss_client_set_read(const rss_client_t *client, const int64_t *entry_ids, size_t count,

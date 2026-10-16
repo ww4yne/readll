@@ -10,6 +10,8 @@
  * 冻结：失败保留未确认操作；分页或落盘任一步失败都不得提交候选游标。
  * Frozen: failed operations remain queued; a paging or persistence failure never commits the
  * candidate cursor.
+ * 冻结：列表同步只保存 metadata；跳过的正文不得预缓存。
+ * Frozen: list synchronization saves metadata only; skipped bodies are never prefetched.
  */
 #include "rss_sync.h"
 
@@ -214,11 +216,6 @@ static rss_sync_step_result_t fetch_entries(rss_sync_t *sync) {
         if (entry->id <= sync->last_entry_id)
             return sync_fail(sync, "entry IDs are not strictly increasing");
         rss_cache_result_t result = rss_cache_put_metadata(sync->cache, entry);
-        if (result == RSS_CACHE_OK) {
-            const char *body = rss_entry_body(sync->page, entry);
-            result = body ? rss_cache_put_body(sync->cache, entry->id, body, entry->body_length)
-                          : RSS_CACHE_CORRUPT;
-        }
         if (result != RSS_CACHE_OK) {
             sync->error.cache_error = result;
             return sync_fail(sync, "entry cache update failed");

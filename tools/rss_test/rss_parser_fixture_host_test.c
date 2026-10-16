@@ -56,7 +56,10 @@ static void entry_case(const char *directory, const char *name, rss_json_result_
     char *json = read_fixture(directory, name, &length);
     rss_entry_page_t *page = calloc(1, sizeof(*page));
     assert(page);
-    assert(rss_json_parse_entries(json, length, page) == expected);
+    rss_json_result_t actual = rss_json_parse_entries(json, length, page);
+    if (actual != expected)
+        fprintf(stderr, "%s: expected %d, got %d\n", name, (int)expected, (int)actual);
+    assert(actual == expected);
     if (expected == RSS_JSON_OK) {
         assert(page->count == 1 && page->items[0].id == 101);
         assert(!strcmp(rss_entry_body(page, &page->items[0]), "<p>body</p>"));
@@ -77,6 +80,26 @@ static void token_boundary_case(void) {
     assert(!rss_config_init(&config, "https://rss.example", token, 20, 10000));
 }
 
+static void metadata_case(const char *directory) {
+    size_t length;
+    char *json = read_fixture(directory, "generated_entries_oversized.json", &length);
+    rss_entry_page_t *page = calloc(1, sizeof(*page));
+    assert(page);
+    assert(rss_json_parse_metadata(json, length, page) == RSS_JSON_OK);
+    assert(page->count == 1 && page->items[0].id == 101);
+    assert(page->body_used == 0 && page->items[0].body_length == 0);
+    assert(page->body_pool[0] == 0);
+    free(json);
+    json = read_fixture(directory, "generated_entry.json", &length);
+    assert(rss_json_parse_entry(json, length, page) == RSS_JSON_OK);
+    assert(page->count == 1 && page->items[0].id == 101);
+    assert(!strcmp(rss_entry_body(page, &page->items[0]), "<p>selected body</p>"));
+    assert(rss_json_parse_entry(json, length - 1, page) != RSS_JSON_OK);
+    assert(page->count == 0 && page->body_used == 0);
+    free(json);
+    free(page);
+}
+
 int main(int argc, char **argv) {
     assert(argc == 3);
     user_case(argv[1]);
@@ -85,6 +108,7 @@ int main(int argc, char **argv) {
     entry_case(argv[1], "entries_truncated.json", RSS_JSON_TRUNCATED);
     entry_case(argv[2], "generated_entries_oversized.json", RSS_JSON_TOO_LARGE);
     token_boundary_case();
+    metadata_case(argv[2]);
     puts("RSS production C parser fixtures PASS");
     return 0;
 }

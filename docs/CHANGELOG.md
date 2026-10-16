@@ -5,8 +5,10 @@ User-visible changes by release; see [README](../README.md) for usage.
 
 ## 开发中 / Unreleased
 
-- 新增 Miniflux RSS 阅读：分类、未读与星标列表、纯文本正文分页、有界离线缓存，以及已读/未读和星标多设备同步；从菜单进入，不改变四个主页面。
-  Add menu-based Miniflux reading with categories, unread/starred lists, paged text, bounded offline cache and synchronized state without changing the four main tabs.
+- 原创 readll 官网以 “read all” 为主题并列展示书籍与文章，重做布局、配色、文案与可访问预览，保留 WebUSB、TF 下载与说明书入口。
+  Introduce an original “read all” website for books and articles with new layout, palette, copy and accessible previews, retaining WebUSB, TF downloads and documentation.
+- 新增 Miniflux RSS 阅读：12 条未读队列、纯文本正文分页与已读多设备同步；从菜单进入，不改变四个主页面。只持久化列表与待同步状态，正文按需获取、仅留本次阅读内存，不按时间预缓存；获取失败保留未读。
+  Add menu-based Miniflux reading with a 12-row unread queue, paged text and synchronized read state. Persist only lists and pending state; fetch bodies on demand for the current session, with no time-based body caching. Failed opens remain unread.
 - 传书网页新增 HTTPS Miniflux URL、每设备 API Key、连接测试与凭据清除；Token 不回显、不写日志。
   Configure and test an HTTPS Miniflux endpoint and per-device API key from the transfer page without exposing the token.
 - 增加本地 mock Miniflux 与缓存/同步/错误回归，保留 `readll` project 名以兼容现有 OTA、TF 与打包工具。

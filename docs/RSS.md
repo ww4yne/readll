@@ -52,9 +52,9 @@ The device records explicit desired states rather than blind toggles:
 
 - 已读/未读使用 Miniflux 的设置状态接口，可安全重试。
   / Read/unread uses the Miniflux set-status API and is safe to retry.
-- 打开某条文章时，当前页中该条及其上方条目立即进入本地已读队列；标题栏双对勾把当前页
+- 成功打开某条文章时，当前页中该条及其上方条目立即进入本地已读队列；标题栏双对勾把当前页
   最多 12 条全部标为已读。返回列表后只显示剩余未读，即使离线也保持一致。
-  / Opening an entry queues that entry and every visible entry above it as read. The title-bar
+  / Successfully opening an entry queues that entry and every visible entry above it as read. The title-bar
   double check marks the current page of up to 12 entries read. Returning to the list shows only
   the remaining unread entries, including while offline.
 - Miniflux 2.3.1 的星标接口是 toggle；设备先比较服务器状态，仅在不同时调用，并在下一次
@@ -69,16 +69,46 @@ The device records explicit desired states rather than blind toggles:
   / Incremental pulls use an overlapping `changed_after` window with entry-ID
   deduplication and periodically reconcile the complete unread set.
 
-## 离线缓存 / Offline cache
+## 列表持久化与按需正文 / Persistent lists and on-demand articles
 
-默认限制为 128 条 metadata、32 篇正文、单篇 24 KiB、正文总量 256 KiB。正文按 LRU
-淘汰；待同步操作不会因正文淘汰而丢失。NVS 只保存配置、游标和小型状态，文章存入可写
-文件系统。
+浏览列表时通常会略过大部分条目。设备因此只持久化最多 128 条 metadata（标题、来源、
+时间、ID 与状态）和独立的待同步操作，不保存任何正文，也不按发布时间、缓存时长或定时器
+预缓存正文。metadata 达到容量时按本地访问序号淘汰，不按文章年龄过期。
 
-The initial limits are 128 metadata records, 32 article bodies, 24 KiB per
-body and 256 KiB in total. Bodies use LRU eviction; pending synchronization
-operations survive body eviction. NVS stores only configuration, cursors and
-small state, while entries use the writable filesystem.
+Most entries are skipped during list review. The device therefore persists
+only up to 128 metadata records (title, source, timestamps, ID and state) plus
+the separate pending-operation queue. It never persists bodies or pre-caches
+them by publication date, age or timer. Metadata eviction uses a local access
+sequence at capacity, not article age.
+
+点击文章时调用 `GET /v1/entries/{id}`，仅为本次阅读解析正文，单篇上限仍为 24 KiB；
+返回列表或离开 RSS 后释放。打开失败或离线时明确提示，所选条目及上方条目不变为已读，
+可重试；整页已读仍可离线排队。已经打开的文章可在断网后继续翻页，但关闭后必须联网重开。
+
+Opening calls `GET /v1/entries/{id}` and parses that body for the current
+reading session only, retaining the 24 KiB per-article limit. Returning to the
+list or leaving RSS releases it. Offline or failed opens report an error and
+leave the selected entry and those above it unread, so opening can be retried.
+Mark-page-as-read still queues offline. An already-open article remains
+readable after disconnecting, but reopening it requires a connection.
+
+Miniflux 标准列表 API 仍返回 `content`；设备接收有界响应后丢弃该字段，不建立正文池。
+这减少本地保留、存储写入与正文容量限制对跳读的影响，但不声称减少服务端传输字节；
+列表响应仍有 96 KiB 的硬上限。定时同步只更新 metadata 和状态，不建立正文缓存。
+
+The standard Miniflux list API still returns `content`; the device discards it
+after receiving the bounded response, without filling a body pool. This reduces
+retention and storage writes and keeps per-body limits out of list triage; it
+does not claim reduced server bandwidth. List responses still have a 96 KiB
+hard bound. Periodic synchronization updates only metadata and state.
+
+旧版 v2 缓存加载时流式校验并丢弃正文，保留 metadata 与同步游标，立即原子重写为
+仅 metadata 的 v3 文件；独立待同步操作不受影响。迁移写入失败会显式报告存储错误。
+
+Loading a legacy v2 cache validates and discards bodies in bounded chunks,
+preserves metadata and the sync cursor, and immediately rewrites a metadata-only
+v3 file atomically. The separate pending queue is unaffected. A failed migration
+write reports a storage error.
 
 ## 设备阅读界面 / Device reading UI
 
@@ -100,12 +130,12 @@ small state, while entries use the writable filesystem.
   / A 4 px pagination bar sits below the article: the remaining track is light gray, while the
   completed width follows the current page and gradients from gray to pure black at its endpoint.
 
-如果内部文件系统空间不足，设备降级为只缓存 metadata，不写满分区。TF 卡不是首版正确性
-的前提。
+列表与待同步状态保存在内部文件系统，正文仅在 PSRAM/内存中处理。TF 卡不是 RSS
+正确性的前提。内部存储不可用时明确提示，不伪装为已持久化。
 
-If internal storage is insufficient, the device falls back to metadata-only
-caching instead of filling the partition. An SD card is not required for
-first-release correctness.
+The internal filesystem stores lists and pending state; bodies are processed
+only in PSRAM/memory. An SD card is not required for RSS correctness.
+Unavailable internal storage is reported rather than presented as durable state.
 
 ## 安全边界 / Security boundaries
 

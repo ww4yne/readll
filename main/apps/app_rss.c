@@ -9,6 +9,9 @@
  *
  * 冻结：render 只绘制；不回显令牌、不下载图片、不发送盲目状态切换。
  * Frozen: render only paints; never echo tokens, download images, or send blind state toggles.
+ * 冻结：为快速跳读只持久化列表；打开时获取正文，返回列表即释放，不按时间缓存。
+ * Frozen: persist only the list for quick triage; fetch bodies on open and free on return,
+ * without time-based body caching.
  */
 
 #include <errno.h>
@@ -406,8 +409,25 @@ static void close_article(void) {
 static bool open_article(int64_t id) {
     const rss_cache_metadata_t *metadata = metadata_by_id(id);
     if (!metadata) return false;
-    size_t body_length = 0;
-    const char *body = rss_cache_get_body(s_cache, id, &body_length);
+    read_pico_transfer_status_t network = {0};
+    read_pico_transfer_get_status(&network);
+    if (!s_configured || !s_time_ready ||
+        network.mode != READ_PICO_TRANSFER_MODE_STA || !network.network_ready) {
+        snprintf(s_notice, sizeof(s_notice), "正文需联网打开；列表可离线查看");
+        return false;
+    }
+    rss_client_error_t error;
+    if (!rss_client_get_entry(&s_client, id, s_scratch, RSS_JSON_RESPONSE_MAX + 1,
+                              s_page_buffer, &error)) {
+        memset(s_page_buffer, 0, sizeof(*s_page_buffer));
+        memset(s_scratch, 0, RSS_JSON_RESPONSE_MAX + 1);
+        snprintf(s_notice, sizeof(s_notice), "正文获取失败 (%d / HTTP %d)",
+                 (int)error.code, error.http_status);
+        return false;
+    }
+    const rss_entry_t *entry = &s_page_buffer->items[0];
+    size_t body_length = entry->body_length;
+    const char *body = rss_entry_body(s_page_buffer, entry);
     const char *source = metadata->entry.feed_title[0] ? metadata->entry.feed_title :
                          metadata->entry.author[0] ? metadata->entry.author : "RSS";
     char date[24];
@@ -416,6 +436,8 @@ static bool open_article(int64_t id) {
                       strlen(source) * 6 + 256;
     char *document = heap_caps_calloc(1, capacity, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
     if (!document) {
+        memset(s_page_buffer, 0, sizeof(*s_page_buffer));
+        memset(s_scratch, 0, RSS_JSON_RESPONSE_MAX + 1);
         snprintf(s_notice, sizeof(s_notice), "正文内存不足");
         return false;
     }
@@ -429,7 +451,9 @@ static bool open_article(int64_t id) {
               append_html_escaped(document, capacity, &used, date) &&
               append_text(document, capacity, &used, "</p>") &&
               append_text(document, capacity, &used,
-                          body && body_length ? body : "<p>正文未缓存</p>");
+                          body && body_length ? body : "<p>正文为空</p>");
+    memset(s_page_buffer, 0, sizeof(*s_page_buffer));
+    memset(s_scratch, 0, RSS_JSON_RESPONSE_MAX + 1);
     if (!ok) {
         free(document);
         snprintf(s_notice, sizeof(s_notice), "正文过长");
@@ -739,7 +763,8 @@ static bool read_batch_fits(const int64_t *ids, size_t count) {
 
 static bool mark_page_through(size_t item) {
     size_t first = (size_t)s_list_page * RSS_LIST_ROWS;
-    if (item < first || item >= s_visible_count) return false;
+    if (item < first || item >= s_visible_count || item - first >= RSS_LIST_ROWS)
+        return false;
     int64_t ids[RSS_LIST_ROWS];
     size_t count = item - first + 1;
     for (size_t i = 0; i < count; ++i)
@@ -808,7 +833,12 @@ static app_redraw_t list_gesture(const ui_gesture_event_t *event) {
     size_t item = (size_t)s_list_page * RSS_LIST_ROWS + (size_t)row;
     if (item < s_visible_count) {
         int64_t id = s_cache->metadata[s_visible[item]].entry.id;
-        if (mark_page_through(item) && open_article(id)) return APP_REDRAW_PAGE;
+        if (!open_article(id)) return APP_REDRAW_PAGE;
+        if (!mark_page_through(item)) {
+            close_article();
+            s_view = RSS_VIEW_LIST;
+        }
+        return APP_REDRAW_PAGE;
     }
     return APP_REDRAW_NONE;
 }
