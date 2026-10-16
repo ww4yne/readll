@@ -13,6 +13,7 @@ unit=r'''
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#include "ui_nav_layout.h"
 typedef struct {int x,y,width,height;} EpdRect;
 typedef struct {int now_ms,leaf;} app_ctx_t;
 typedef enum {APP_REDRAW_NONE,APP_REDRAW_AREA,APP_REDRAW_PAGE,APP_REDRAW_FULL} app_redraw_t;
@@ -42,7 +43,7 @@ static int ui_nav_hit(int x,int y){(void)x;return y>=1096?2:-1;}
 static void ui_nav_request(app_ctx_t *ctx,int tab){(void)ctx;nav=tab;}
 static bool app_book_request_open_from_home(const char *path){assert(!strcmp(path,book.path));++open_calls;return !fail_open;}
 '''
-unit+='\n'.join(function(n,home) for n in ['continue_card_rect','continue_card_hit_rect','continue_card_pressed','control_feedback_area','hit','control','on_gesture'])
+unit+='\n'.join(function(n,home) for n in ['rss_card_rect','continue_card_rect','continue_card_hit_rect','continue_card_pressed','control_feedback_area','hit','control','on_gesture'])
 settings=(root/'main/settings.h').read_text();a=settings.index('typedef enum {\n    APP_READER_KEY_PREV');b=settings.index('} app_reader_key_action_t;',a)+len('} app_reader_key_action_t;');unit+=settings[a:b]
 unit+=r'''
 enum {READER_PANEL_NONE,READER_PANEL_TOOLS};
@@ -93,5 +94,5 @@ int main(void){app_ctx_t ctx={0};
 '''
 with tempfile.TemporaryDirectory(prefix='readll-reading-origin-',dir=root / 'build') as folder:
  c=Path(folder)/'test.c';binary=Path(folder)/'test';c.write_text(unit)
- subprocess.run(['cc','-std=c11','-Wall','-Wextra','-Werror','-Wno-unused-function','-g','-fsanitize=address,undefined',str(c),'-o',str(binary)],check=True)
+ subprocess.run(['cc','-std=c11','-Wall','-Wextra','-Werror','-Wno-unused-function','-g','-fsanitize=address,undefined','-I'+str(root/'main/ui'),str(c),'-o',str(binary)],check=True)
  subprocess.run([str(binary)],check=True)
